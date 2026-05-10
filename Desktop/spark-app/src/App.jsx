@@ -6,6 +6,8 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showSignup, setShowSignup] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [signupStep, setSignupStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -14,6 +16,7 @@ export default function App() {
   const [vibe, setVibe] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
   const [profileImage, setProfileImage] = useState(null);
+  const [interests, setInterests] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [inputText, setInputText] = useState('');
   const [view, setView] = useState('swipe');
@@ -28,6 +31,9 @@ export default function App() {
   const [tapTimeout, setTapTimeout] = useState(null);
   
   const fileInputRef = useRef(null);
+
+  // Interest options
+  const interestOptions = ['🎨 Art', '🏏 Cricket', '🍛 Food', '🎬 Movies', '🎵 Music', '✈️ Travel', '📚 Reading', '🧘 Wellness', '💻 Tech', '🎮 Gaming', '🏋️ Gym', '☕ Chai'];
 
   const [allUsers, setAllUsers] = useState(() => {
     const saved = localStorage.getItem('connect_dots_users');
@@ -67,33 +73,28 @@ export default function App() {
     }
   };
 
-  const handleLogoClick = () => {
-    if (tapTimeout) clearTimeout(tapTimeout);
-    const newTapCount = secretTapCount + 1;
-    setSecretTapCount(newTapCount);
-    if (newTapCount >= 5) {
-      setSecretMode(true);
-      setSecretTapCount(0);
-    }
-    const timeout = setTimeout(() => setSecretTapCount(0), 1000);
-    setTapTimeout(timeout);
-  };
-
-  const handleNumberPad = (num) => {
-    const newCode = secretCode + num;
-    setSecretCode(newCode);
-    if (newCode === '1234') {
-      setShowToilet(true);
-      setSecretMode(false);
-      setSecretCode('');
-    } else if (newCode.length === 4) {
-      setSecretCode('');
+  const toggleInterest = (interest) => {
+    if (interests.includes(interest)) {
+      setInterests(interests.filter(i => i !== interest));
+    } else {
+      setInterests([...interests, interest]);
     }
   };
 
-  const handleCloseToilet = () => {
-    setShowToilet(false);
-    setSecretCode('');
+  const handleNextStep = () => {
+    if (signupStep === 1 && (!name || !age)) {
+      alert('Please tell us your name and age!');
+      return;
+    }
+    if (signupStep === 2 && (!vibe || !bio)) {
+      alert('Tell us a bit about yourself!');
+      return;
+    }
+    setSignupStep(signupStep + 1);
+  };
+
+  const handlePrevStep = () => {
+    setSignupStep(signupStep - 1);
   };
 
   const handleSignup = (e) => {
@@ -108,12 +109,14 @@ export default function App() {
       vibe: vibe || "Excited to meet people",
       profilePhoto: profilePhoto || "😊",
       profileImage: profileImage || null,
+      interests: interests,
       matches: [], likes: [], likedBy: [], passes: [], messages: {},
       loginMethod: 'email'
     };
     setAllUsers({ ...allUsers, [email]: newUser });
     setCurrentUser({ email, name });
     setLoggedIn(true);
+    setSignupStep(1);
   };
 
   const handleLogin = (e) => {
@@ -159,6 +162,7 @@ export default function App() {
                 vibe: "Excited to meet people",
                 profilePhoto: googlePicture ? '🖼️' : "😊",
                 profileImage: googlePicture || null,
+                interests: [],
                 matches: [], likes: [], likedBy: [], passes: [], messages: {},
                 loginMethod: 'google'
               };
@@ -177,6 +181,7 @@ export default function App() {
     setLoggedIn(false);
     setCurrentUser(null);
     setActiveChat(null);
+    setShowSettings(false);
   };
 
   const updateMyData = (updates) => {
@@ -217,7 +222,7 @@ export default function App() {
   };
 
   const deleteAccount = () => {
-    if (confirm('Delete your account? This cannot be undone.')) {
+    if (confirm('⚠️ Permanently delete your account? This cannot be undone.')) {
       const newUsers = { ...allUsers };
       delete newUsers[currentUser.email];
       setAllUsers(newUsers);
@@ -244,6 +249,35 @@ export default function App() {
     setTouchX(0);
     setIsDragging(false);
     setTouchStart(null);
+  };
+
+  const handleLogoClick = () => {
+    if (tapTimeout) clearTimeout(tapTimeout);
+    const newTapCount = secretTapCount + 1;
+    setSecretTapCount(newTapCount);
+    if (newTapCount >= 5) {
+      setSecretMode(true);
+      setSecretTapCount(0);
+    }
+    const timeout = setTimeout(() => setSecretTapCount(0), 1000);
+    setTapTimeout(timeout);
+  };
+
+  const handleNumberPad = (num) => {
+    const newCode = secretCode + num;
+    setSecretCode(newCode);
+    if (newCode === '1234') {
+      setShowToilet(true);
+      setSecretMode(false);
+      setSecretCode('');
+    } else if (newCode.length === 4) {
+      setSecretCode('');
+    }
+  };
+
+  const handleCloseToilet = () => {
+    setShowToilet(false);
+    setSecretCode('');
   };
 
   const Logo = () => (
@@ -322,33 +356,82 @@ export default function App() {
           <Logo />
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Indian Dating · Real Connections</p>
-          <button onClick={handleGoogleLogin} style={styles.googleButton}><span style={{ fontSize: 20, marginRight: 12 }}>G</span>Continue with Google</button>
-          <div style={styles.divider}><span style={styles.dividerLine}></span><span style={styles.dividerText}>or</span><span style={styles.dividerLine}></span></div>
+          
           {!showSignup ? (
-            <form onSubmit={handleLogin}>
-              <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <button type="submit" style={styles.button}>Login →</button>
-            </form>
+            <>
+              <button onClick={handleGoogleLogin} style={styles.googleButton}><span style={{ fontSize: 20, marginRight: 12 }}>G</span>Continue with Google</button>
+              <div style={styles.divider}><span style={styles.dividerLine}></span><span style={styles.dividerText}>or</span><span style={styles.dividerLine}></span></div>
+              <form onSubmit={handleLogin}>
+                <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <button type="submit" style={styles.button}>Login →</button>
+              </form>
+              <p style={styles.switchText}>New here? <button onClick={() => { setShowSignup(true); setSignupStep(1); }} style={styles.linkButton}>Create account</button></p>
+            </>
           ) : (
-            <form onSubmit={handleSignup}>
-              <input style={styles.input} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
-              <input style={styles.input} placeholder="Age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
-              <input style={styles.input} placeholder="Vibe" value={vibe} onChange={(e) => setVibe(e.target.value)} />
-              <textarea style={{...styles.input, minHeight: 60}} placeholder="Short bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
-              <input style={styles.input} placeholder="Profile emoji" value={profilePhoto} onChange={(e) => setProfilePhoto(e.target.value)} />
-              <div style={styles.imageUploadArea}>
-                <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
-                <button type="button" onClick={() => fileInputRef.current?.click()} style={styles.imageUploadBtn}>{profileImage ? '📷 Photo added ✓' : '📷 Upload profile photo'}</button>
-                {profileImage && <div style={styles.imagePreview}><img src={profileImage} alt="Preview" style={styles.imagePreviewImg} /></div>}
+            <>
+              <div style={styles.progressBar}>
+                <div style={{...styles.progressFill, width: `${(signupStep / 3) * 100}%`}} />
               </div>
-              <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              <button type="submit" style={styles.button}>Create Account →</button>
-            </form>
+              <div style={styles.stepIndicators}>
+                <div style={{...styles.stepDot, background: signupStep >= 1 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>1</div>
+                <div style={styles.stepLine} />
+                <div style={{...styles.stepDot, background: signupStep >= 2 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>2</div>
+                <div style={styles.stepLine} />
+                <div style={{...styles.stepDot, background: signupStep >= 3 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>3</div>
+              </div>
+              
+              {signupStep === 1 && (
+                <div style={styles.stepContainer}>
+                  <h3 style={styles.stepTitle}>Let's start with the basics ✨</h3>
+                  <input style={styles.input} placeholder="What's your name?" value={name} onChange={(e) => setName(e.target.value)} />
+                  <input style={styles.input} placeholder="Your age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
+                  <div style={styles.imageUploadArea}>
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} style={styles.imageUploadBtn}>{profileImage ? '📷 Great photo! ✓' : '📷 Add a profile photo'}</button>
+                    {profileImage && <div style={styles.imagePreview}><img src={profileImage} alt="Preview" style={styles.imagePreviewImg} /></div>}
+                  </div>
+                  <button onClick={handleNextStep} style={styles.button}>Next →</button>
+                </div>
+              )}
+              
+              {signupStep === 2 && (
+                <div style={styles.stepContainer}>
+                  <h3 style={styles.stepTitle}>Tell us about yourself 💫</h3>
+                  <input style={styles.input} placeholder="Your vibe (e.g., Foodie, Traveler, Artist)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
+                  <textarea style={{...styles.input, minHeight: 80}} placeholder="Write a short bio... what makes you unique?" value={bio} onChange={(e) => setBio(e.target.value)} />
+                  <div style={styles.buttonGroup}>
+                    <button onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                    <button onClick={handleNextStep} style={styles.button}>Next →</button>
+                  </div>
+                </div>
+              )}
+              
+              {signupStep === 3 && (
+                <div style={styles.stepContainer}>
+                  <h3 style={styles.stepTitle}>What do you love? ❤️</h3>
+                  <div style={styles.interestsGrid}>
+                    {interestOptions.map(interest => (
+                      <button key={interest} onClick={() => toggleInterest(interest)} style={{...styles.interestBtn, background: interests.includes(interest) ? '#FF4D6D' : 'rgba(255,255,255,0.1)', border: interests.includes(interest) ? 'none' : '1px solid rgba(255,255,255,0.2)'}}>
+                        {interest}
+                      </button>
+                    ))}
+                  </div>
+                  <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <div style={styles.buttonGroup}>
+                    <button onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                    <button onClick={handleSignup} style={styles.button}>Finish & Start →</button>
+                  </div>
+                </div>
+              )}
+              
+              <p style={styles.switchText}>Already have an account? <button onClick={() => setShowSignup(false)} style={styles.linkButton}>Login</button></p>
+            </>
           )}
-          <p style={styles.switchText}>{!showSignup ? 'New here?' : 'Already have an account?'} <button onClick={() => setShowSignup(!showSignup)} style={styles.linkButton}>{!showSignup ? 'Create account' : 'Login'}</button></p>
         </div>
+        
+        {/* Easter Egg Popups */}
         {secretMode && (
           <div style={styles.modalOverlay}>
             <div style={styles.modalCard}>
@@ -365,6 +448,7 @@ export default function App() {
             </div>
           </div>
         )}
+        
         {showToilet && (
           <div style={styles.modalOverlay}>
             <div style={styles.toiletCard}>
@@ -383,101 +467,146 @@ export default function App() {
   const hasNewLikes = likedBy.length > 0 && !likedBy.some(email => myLikes.includes(email));
 
   return (
-    <div style={styles.container}>
-      <div style={styles.appCard}>
-        <div style={styles.header}>
-          <SmallLogo />
-          <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
-        </div>
-        <div style={styles.tabs}>
-          <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>🔍 Swipe</button>
-          <button onClick={() => setView('matches')} style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}>💬 Matches ({mutualMatches.length}){hasNewLikes && <span style={styles.newBadge}>!</span>}</button>
-        </div>
-        {view === 'swipe' && (
-          <>
-            {otherUsers.length === 0 ? (
-              <div style={styles.emptyState}>
-                <div style={styles.emptyEmoji}>🎉</div>
-                <h3>No more profiles!</h3>
-                <button onClick={() => setView('matches')} style={styles.resetBtn}>View Matches →</button>
-              </div>
-            ) : (
-              <div style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'none', transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)'}}
-                onMouseDown={(e) => handleDragStart(e, currentProfile.email)}
-                onMouseMove={handleDragMove}
-                onMouseUp={() => handleDragEnd(currentProfile.email)}
-                onTouchStart={(e) => handleDragStart(e, currentProfile.email)}
-                onTouchMove={handleDragMove}
-                onTouchEnd={() => handleDragEnd(currentProfile.email)}>
-                <div style={styles.profilePhotoContainer}>
-                  {currentProfile.profileImage ? (
-                    <img src={currentProfile.profileImage} alt={currentProfile.name} style={styles.profilePhotoImg} />
-                  ) : (
-                    <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>
+    <>
+      <div style={styles.container}>
+        <div style={styles.appCard}>
+          <div style={styles.header}>
+            <SmallLogo />
+            <div style={styles.headerRight}>
+              <button onClick={() => setShowSettings(true)} style={styles.settingsBtn}>⚙️</button>
+              <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
+            </div>
+          </div>
+          <div style={styles.tabs}>
+            <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>🔍 Swipe</button>
+            <button onClick={() => setView('matches')} style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}>💬 Matches ({mutualMatches.length}){hasNewLikes && <span style={styles.newBadge}>!</span>}</button>
+          </div>
+          {view === 'swipe' && (
+            <>
+              {otherUsers.length === 0 ? (
+                <div style={styles.emptyState}>
+                  <div style={styles.emptyEmoji}>🎉</div>
+                  <h3>No more profiles!</h3>
+                  <button onClick={() => setView('matches')} style={styles.resetBtn}>View Matches →</button>
+                </div>
+              ) : (
+                <div style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'none', transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)'}}
+                  onMouseDown={(e) => handleDragStart(e, currentProfile.email)}
+                  onMouseMove={handleDragMove}
+                  onMouseUp={() => handleDragEnd(currentProfile.email)}
+                  onTouchStart={(e) => handleDragStart(e, currentProfile.email)}
+                  onTouchMove={handleDragMove}
+                  onTouchEnd={() => handleDragEnd(currentProfile.email)}>
+                  <div style={styles.profilePhotoContainer}>
+                    {currentProfile.profileImage ? (
+                      <img src={currentProfile.profileImage} alt={currentProfile.name} style={styles.profilePhotoImg} />
+                    ) : (
+                      <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>
+                    )}
+                  </div>
+                  <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
+                  <p style={styles.swipeVibe}>{currentProfile.vibe}</p>
+                  <p style={styles.swipeBio}>"{currentProfile.bio}"</p>
+                  {currentProfile.interests && currentProfile.interests.length > 0 && (
+                    <div style={styles.interestsPreview}>
+                      {currentProfile.interests.slice(0, 3).map(interest => (
+                        <span key={interest} style={styles.interestTag}>{interest}</span>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
-                <p style={styles.swipeVibe}>{currentProfile.vibe}</p>
-                <p style={styles.swipeBio}>"{currentProfile.bio}"</p>
+              )}
+              <div style={styles.actionButtons}>
+                <button onClick={() => otherUsers[0] && handlePass(otherUsers[0].email)} style={styles.nopeCircle}>✕</button>
+                <button onClick={() => otherUsers[0] && handleLike(otherUsers[0].email)} style={styles.likeCircle}>♥</button>
               </div>
-            )}
-            <div style={styles.actionButtons}>
-              <button onClick={() => otherUsers[0] && handlePass(otherUsers[0].email)} style={styles.nopeCircle}>✕</button>
-              <button onClick={() => otherUsers[0] && handleLike(otherUsers[0].email)} style={styles.likeCircle}>♥</button>
-            </div>
-          </>
-        )}
-        {view === 'matches' && (
-          <>
-            {mutualMatches.length === 0 && likedBy.filter(email => !myLikes.includes(email)).length === 0 ? (
-              <div style={styles.emptyState}>
-                <div style={styles.emptyEmoji}>💔</div>
-                <h3>No matches yet</h3>
-                <button onClick={() => setView('swipe')} style={styles.resetBtn}>Start Swiping →</button>
-              </div>
-            ) : (
-              <>
-                {likedBy.filter(email => !myLikes.includes(email)).length > 0 && (
-                  <div style={styles.likesSection}>
-                    <p style={styles.sectionTitle}>❤️ Liked You ({likedBy.filter(email => !myLikes.includes(email)).length})</p>
-                    {likedBy.filter(email => !myLikes.includes(email)).map(email => {
-                      const user = allUsers[email];
-                      if (!user) return null;
-                      return (
-                        <div key={email} style={styles.matchItem}>
-                          {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
-                          <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div></div>
-                          <button onClick={() => handleLike(email)} style={styles.likeBackBtn}>Like Back ❤️</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {mutualMatches.length > 0 && (
-                  <div style={styles.matchesSection}>
-                    <p style={styles.sectionTitle}>✨ Your Matches ({mutualMatches.length}) ✨</p>
-                    {mutualMatches.map(email => {
-                      const user = allUsers[email];
-                      if (!user) return null;
-                      return (
-                        <div key={email} style={styles.matchItem} onClick={() => setActiveChat(user)}>
-                          {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
-                          <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div></div>
-                          <button style={styles.chatBtn}>💬 Chat</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
-        <div style={styles.settingsSection}>
-          <button onClick={deleteAccount} style={styles.dangerBtn}>🗑️ Delete Account</button>
+            </>
+          )}
+          {view === 'matches' && (
+            <>
+              {mutualMatches.length === 0 && likedBy.filter(email => !myLikes.includes(email)).length === 0 ? (
+                <div style={styles.emptyState}>
+                  <div style={styles.emptyEmoji}>💔</div>
+                  <h3>No matches yet</h3>
+                  <button onClick={() => setView('swipe')} style={styles.resetBtn}>Start Swiping →</button>
+                </div>
+              ) : (
+                <>
+                  {likedBy.filter(email => !myLikes.includes(email)).length > 0 && (
+                    <div style={styles.likesSection}>
+                      <p style={styles.sectionTitle}>❤️ Liked You ({likedBy.filter(email => !myLikes.includes(email)).length})</p>
+                      {likedBy.filter(email => !myLikes.includes(email)).map(email => {
+                        const user = allUsers[email];
+                        if (!user) return null;
+                        return (
+                          <div key={email} style={styles.matchItem}>
+                            {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
+                            <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div></div>
+                            <button onClick={() => handleLike(email)} style={styles.likeBackBtn}>Like Back ❤️</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {mutualMatches.length > 0 && (
+                    <div style={styles.matchesSection}>
+                      <p style={styles.sectionTitle}>✨ Your Matches ({mutualMatches.length}) ✨</p>
+                      {mutualMatches.map(email => {
+                        const user = allUsers[email];
+                        if (!user) return null;
+                        return (
+                          <div key={email} style={styles.matchItem} onClick={() => setActiveChat(user)}>
+                            {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
+                            <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div></div>
+                            <button style={styles.chatBtn}>💬 Chat</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
-    </div>
+      
+      {/* Settings Modal */}
+      {showSettings && (
+        <div style={styles.modalOverlay} onClick={() => setShowSettings(false)}>
+          <div style={styles.settingsModal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.settingsHeader}>
+              <h2 style={styles.settingsTitle}>Settings</h2>
+              <button onClick={() => setShowSettings(false)} style={styles.closeSettingsBtn}>✕</button>
+            </div>
+            <div style={styles.settingsContent}>
+              <div style={styles.settingsSection}>
+                <h3 style={styles.settingsSectionTitle}>Account</h3>
+                <div style={styles.settingsItem}>
+                  <span>📧 Email</span>
+                  <span style={styles.settingsValue}>{currentUser?.email}</span>
+                </div>
+                <div style={styles.settingsItem}>
+                  <span>👤 Name</span>
+                  <span style={styles.settingsValue}>{userData?.name}</span>
+                </div>
+                <div style={styles.settingsItem}>
+                  <span>🎂 Age</span>
+                  <span style={styles.settingsValue}>{userData?.age}</span>
+                </div>
+              </div>
+              <div style={styles.settingsSection}>
+                <h3 style={styles.settingsSectionTitle}>Danger Zone</h3>
+                <button onClick={deleteAccount} style={styles.dangerSettingsBtn}>
+                  🗑️ Delete Account Permanently
+                </button>
+                <p style={styles.dangerText}>This action cannot be undone. All your data will be lost.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -496,18 +625,22 @@ const styles = {
   smallLogoText: { fontSize: 16, fontWeight: '600', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   title: { fontSize: 28, fontWeight: '700', marginBottom: 8, background: 'linear-gradient(135deg, #fff, #cbd5e1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   subtitle: { color: 'rgba(255,255,255,0.5)', marginBottom: 32 },
-  googleButton: { background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: 50, padding: 14, fontSize: 16, fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: 20, color: '#333' },
+  googleButton: { background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: 50, padding: 14, fontSize: 16, fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: 20, color: '#333', transition: 'transform 0.15s' },
   divider: { display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' },
   dividerLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.2)' },
   dividerText: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
   input: { width: '100%', padding: 16, marginBottom: 12, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 28, fontSize: 14, background: 'rgba(255,255,255,0.05)', color: 'white', outline: 'none' },
-  button: { background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', color: 'white', border: 'none', padding: 14, borderRadius: 50, fontSize: 16, fontWeight: '600', cursor: 'pointer', width: '100%' },
+  button: { background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', color: 'white', border: 'none', padding: 14, borderRadius: 50, fontSize: 16, fontWeight: '600', cursor: 'pointer', width: '100%', transition: 'transform 0.15s' },
+  secondaryButton: { background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: 14, borderRadius: 50, fontSize: 16, fontWeight: '600', cursor: 'pointer', flex: 1, transition: 'transform 0.15s' },
+  buttonGroup: { display: 'flex', gap: 12, marginTop: 8 },
   switchText: { marginTop: 20, fontSize: 14, color: 'rgba(255,255,255,0.5)' },
   linkButton: { background: 'none', border: 'none', color: '#FF4D6D', fontWeight: '600', cursor: 'pointer' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  headerRight: { display: 'flex', gap: 8 },
+  settingsBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', color: 'white', fontSize: 16 },
   logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12 },
   tabs: { display: 'flex', gap: 10, marginBottom: 20 },
-  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, position: 'relative' },
+  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, position: 'relative', transition: 'all 0.15s' },
   newBadge: { position: 'absolute', top: -5, right: 10, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 6px', fontSize: 10 },
   swipeCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: 48, padding: 32, textAlign: 'center', marginBottom: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'grab', position: 'relative' },
   profilePhotoContainer: { marginBottom: 16 },
@@ -516,9 +649,11 @@ const styles = {
   swipeName: { fontSize: 28, fontWeight: '700', marginBottom: 4, color: 'white' },
   swipeVibe: { color: '#FF4D6D', fontWeight: '600', fontSize: 14, marginBottom: 8 },
   swipeBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic' },
+  interestsPreview: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 },
+  interestTag: { background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: 20, fontSize: 11, color: 'rgba(255,255,255,0.7)' },
   actionButtons: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 },
-  nopeCircle: { width: 64, height: 64, borderRadius: 32, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', fontSize: 28, color: '#FF4D6D', cursor: 'pointer' },
-  likeCircle: { width: 72, height: 72, borderRadius: 36, background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', border: 'none', fontSize: 32, color: 'white', cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,77,109,0.3)' },
+  nopeCircle: { width: 64, height: 64, borderRadius: 32, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', fontSize: 28, color: '#FF4D6D', cursor: 'pointer', transition: 'transform 0.15s' },
+  likeCircle: { width: 72, height: 72, borderRadius: 36, background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', border: 'none', fontSize: 32, color: 'white', cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,77,109,0.3)', transition: 'transform 0.15s' },
   emptyState: { textAlign: 'center', padding: 40 },
   emptyEmoji: { fontSize: 60, marginBottom: 16 },
   resetBtn: { marginTop: 16, padding: '10px 24px', background: '#FF4D6D', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer' },
@@ -550,15 +685,22 @@ const styles = {
   chatInput: { padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 10 },
   chatInputField: { flex: 1, padding: 14, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 40, fontSize: 14, background: 'rgba(255,255,255,0.05)', color: 'white' },
   sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer' },
-  settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center' },
-  dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12 },
   imageUploadArea: { marginBottom: 12 },
   imageUploadBtn: { width: '100%', padding: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 28, color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer' },
   imagePreview: { marginTop: 8, display: 'flex', justifyContent: 'center' },
   imagePreviewImg: { width: 60, height: 60, borderRadius: 30, objectFit: 'cover', border: '2px solid #FF4D6D' },
+  progressBar: { height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, marginBottom: 24, overflow: 'hidden' },
+  progressFill: { height: '100%', background: '#FF4D6D', borderRadius: 2, transition: 'width 0.3s' },
+  stepIndicators: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 },
+  stepDot: { width: 28, height: 28, borderRadius: 14, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold', color: 'white' },
+  stepLine: { width: 30, height: 1, background: 'rgba(255,255,255,0.2)' },
+  stepContainer: { animation: 'fadeIn 0.3s' },
+  stepTitle: { color: 'white', fontSize: 18, marginBottom: 20, textAlign: 'center' },
+  interestsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 },
+  interestBtn: { padding: '8px 12px', borderRadius: 50, fontSize: 12, cursor: 'pointer', color: 'white', transition: 'all 0.15s' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modalCard: { background: 'rgba(20,20,30,0.9)', backdropFilter: 'blur(20px)', borderRadius: 24, padding: '32px 28px', textAlign: 'center', width: 300, border: '0.5px solid rgba(255,255,255,0.1)' },
-  modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 24 },
+  modalCard: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '32px 28px', textAlign: 'center', width: 300, border: '0.5px solid rgba(255,255,255,0.1)' },
+  modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, marginBottom: 24 },
   secretCodeDisplay: { display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 28 },
   codeDot: { fontSize: 24, color: '#FF4D6D' },
   codeDotEmpty: { fontSize: 24, color: 'rgba(255,255,255,0.2)' },
@@ -568,4 +710,15 @@ const styles = {
   toiletEmoji: { fontSize: 64, marginBottom: 20, cursor: 'pointer' },
   toiletMessage: { color: 'rgba(255,255,255,0.85)', fontSize: 15, marginBottom: 28 },
   closeBtn: { background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', padding: '10px 24px', borderRadius: 30, color: 'rgba(255,255,255,0.6)', cursor: 'pointer', width: '100%' },
+  settingsModal: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, width: '90%', maxWidth: 400, overflow: 'hidden', border: '0.5px solid rgba(255,255,255,0.1)' },
+  settingsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  settingsTitle: { color: 'white', fontSize: 20, fontWeight: '600' },
+  closeSettingsBtn: { background: 'none', border: 'none', fontSize: 20, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' },
+  settingsContent: { padding: 20 },
+  settingsSection: { marginBottom: 24 },
+  settingsSectionTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 },
+  settingsItem: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'white' },
+  settingsValue: { color: 'rgba(255,255,255,0.5)' },
+  dangerSettingsBtn: { background: 'rgba(255,77,109,0.15)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '12px 16px', borderRadius: 28, width: '100%', cursor: 'pointer', fontSize: 14, fontWeight: '600' },
+  dangerText: { fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 8, textAlign: 'center' },
 };
