@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 
+// 👇 YOUR GOOGLE CLIENT ID - Already added!
+const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
+
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -29,7 +32,15 @@ export default function App() {
     localStorage.setItem('connect_dots_users', JSON.stringify(allUsers));
   }, [allUsers]);
 
-  // Liquid ripple effect on touch
+  // Load Google Identity Services script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+  }, []);
+
   const createRipple = (e, elementId) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -54,6 +65,7 @@ export default function App() {
     !myLikes.includes(user.email)
   );
 
+  // Email/Password Signup
   const handleSignup = (e) => {
     e.preventDefault();
     if (allUsers[email]) {
@@ -67,7 +79,8 @@ export default function App() {
       bio: bio || "New to Connect the Dots!",
       vibe: vibe || "Excited to meet people",
       profilePhoto: profilePhoto || "😊",
-      matches: [], likes: [], likedBy: [], passes: [], messages: {}
+      matches: [], likes: [], likedBy: [], passes: [], messages: {},
+      loginMethod: 'email'
     };
     
     setAllUsers({ ...allUsers, [email]: newUser });
@@ -75,6 +88,7 @@ export default function App() {
     setLoggedIn(true);
   };
 
+  // Email/Password Login
   const handleLogin = (e) => {
     e.preventDefault();
     const user = allUsers[email];
@@ -84,6 +98,53 @@ export default function App() {
     } else {
       alert('Invalid email or password!');
     }
+  };
+
+  // Google Login
+  const handleGoogleLogin = () => {
+    // @ts-ignore
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'email profile openid',
+      callback: (tokenResponse) => {
+        if (tokenResponse.access_token) {
+          fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+          })
+          .then(res => res.json())
+          .then(userInfo => {
+            const googleEmail = userInfo.email;
+            const googleName = userInfo.given_name || userInfo.name || googleEmail.split('@')[0];
+            const googlePicture = userInfo.picture;
+            
+            // Check if user already exists
+            if (allUsers[googleEmail]) {
+              // Login existing user
+              setCurrentUser({ email: googleEmail, name: allUsers[googleEmail].name });
+              setLoggedIn(true);
+            } else {
+              // Create new user
+              const newUser = {
+                email: googleEmail,
+                password: 'google_oauth_' + Date.now(),
+                name: googleName,
+                age: 25,
+                bio: "New to Connect the Dots!",
+                vibe: "Excited to meet people",
+                profilePhoto: googlePicture ? '🖼️' : "😊",
+                profileImageUrl: googlePicture,
+                matches: [], likes: [], likedBy: [], passes: [], messages: {},
+                loginMethod: 'google'
+              };
+              setAllUsers({ ...allUsers, [googleEmail]: newUser });
+              setCurrentUser({ email: googleEmail, name: googleName });
+              setLoggedIn(true);
+            }
+          });
+        }
+      }
+    });
+    client.requestAccessToken();
   };
 
   const handleLogout = () => {
@@ -165,7 +226,7 @@ export default function App() {
     }
   };
 
-  const handleTouchStart = (e, itemId, action) => {
+  const handleTouchStart = (e, itemId) => {
     setTouchStart(e.touches[0].clientX);
     setIsDragging(true);
     createRipple(e, itemId);
@@ -177,7 +238,7 @@ export default function App() {
     setTouchX(delta);
   };
 
-  const handleTouchEnd = (itemId, action) => {
+  const handleTouchEnd = (itemId) => {
     if (Math.abs(touchX) > 50) {
       if (touchX > 0) handleLike(itemId);
       else handlePass(itemId);
@@ -196,11 +257,7 @@ export default function App() {
       <div style={styles.container}>
         <div style={styles.chatCard}>
           <div style={styles.chatHeader}>
-            <button 
-              onClick={() => setActiveChat(null)} 
-              style={styles.backButton}
-              onTouchStart={(e) => createRipple(e, 'back')}
-            >←</button>
+            <button onClick={() => setActiveChat(null)} style={styles.backButton}>←</button>
             <div style={styles.chatUser}>
               <div style={styles.chatEmoji}>{match.profilePhoto || "😊"}</div>
               <div>
@@ -213,23 +270,19 @@ export default function App() {
             {msgs.length === 0 && (
               <div style={styles.icebreaker}>
                 <div style={styles.icebreakerText}>💬 Start the conversation!</div>
-                <button 
-                  onClick={() => {
-                    sendMessage(match.email, `Hey ${match.name}! Great to meet you 😊`);
-                    setTimeout(() => {
-                      const replies = ["Hey! So glad we matched ✨", "Love your vibe!", "How's your day going?", "You seem really cool!"];
-                      const reply = replies[Math.floor(Math.random() * replies.length)];
-                      const currentMsgs = userData?.messages?.[match.email] || [];
-                      const newMsgs = {
-                        ...(userData?.messages || {}),
-                        [match.email]: [...currentMsgs, { from: "them", text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), timestamp: Date.now() }]
-                      };
-                      updateMyData({ messages: newMsgs });
-                    }, 1000);
-                  }}
-                  style={styles.icebreakerBtn}
-                  onTouchStart={(e) => createRipple(e, 'icebreaker')}
-                >Say Hello 👋</button>
+                <button onClick={() => {
+                  sendMessage(match.email, `Hey ${match.name}! Great to meet you 😊`);
+                  setTimeout(() => {
+                    const replies = ["Hey! So glad we matched ✨", "Love your vibe!", "How's your day going?", "You seem really cool!"];
+                    const reply = replies[Math.floor(Math.random() * replies.length)];
+                    const currentMsgs = userData?.messages?.[match.email] || [];
+                    const newMsgs = {
+                      ...(userData?.messages || {}),
+                      [match.email]: [...currentMsgs, { from: "them", text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), timestamp: Date.now() }]
+                    };
+                    updateMyData({ messages: newMsgs });
+                  }, 1000);
+                }} style={styles.icebreakerBtn}>Say Hello 👋</button>
               </div>
             )}
             {msgs.map((msg, i) => (
@@ -249,11 +302,7 @@ export default function App() {
               onChange={(e) => setInputText(e.target.value)} 
               onKeyDown={(e) => e.key === 'Enter' && sendMessage(match.email, inputText)} 
             />
-            <button 
-              style={styles.sendButton} 
-              onClick={() => sendMessage(match.email, inputText)}
-              onTouchStart={(e) => createRipple(e, 'send')}
-            >Send</button>
+            <button style={styles.sendButton} onClick={() => sendMessage(match.email, inputText)}>Send</button>
           </div>
         </div>
       </div>
@@ -269,16 +318,28 @@ export default function App() {
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Indian Dating · Real Connections</p>
           
+          {/* Google Login Button */}
+          <button 
+            onClick={handleGoogleLogin} 
+            style={styles.googleButton}
+            onTouchStart={(e) => createRipple(e, 'google')}
+          >
+            <span style={{ fontSize: 20, marginRight: 12 }}>G</span>
+            Continue with Google
+          </button>
+          
+          <div style={styles.divider}>
+            <span style={styles.dividerLine}></span>
+            <span style={styles.dividerText}>or</span>
+            <span style={styles.dividerLine}></span>
+          </div>
+          
           {!showSignup ? (
             <>
               <form onSubmit={handleLogin}>
                 <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button 
-                  type="submit" 
-                  style={styles.button}
-                  onTouchStart={(e) => createRipple(e, 'login')}
-                >Login →</button>
+                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'login')}>Login →</button>
               </form>
               <p style={styles.switchText}>
                 New here? <button onClick={() => setShowSignup(true)} style={styles.linkButton}>Create account</button>
@@ -294,11 +355,7 @@ export default function App() {
                 <input style={styles.input} placeholder="Profile emoji (e.g., 😊 🏏 🎨)" value={profilePhoto} onChange={(e) => setProfilePhoto(e.target.value)} />
                 <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button 
-                  type="submit" 
-                  style={styles.button}
-                  onTouchStart={(e) => createRipple(e, 'signup')}
-                >Create Account →</button>
+                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'signup')}>Create Account →</button>
               </form>
               <p style={styles.switchText}>
                 Already have an account? <button onClick={() => setShowSignup(false)} style={styles.linkButton}>Login</button>
@@ -313,6 +370,7 @@ export default function App() {
   // Main App Screen
   const currentProfile = otherUsers[0];
   const hasNewLikes = likedBy.length > 0 && !likedBy.some(email => myLikes.includes(email));
+  const isGoogleUser = userData?.loginMethod === 'google';
 
   return (
     <div style={styles.container}>
@@ -320,28 +378,19 @@ export default function App() {
         <div style={styles.header}>
           <div>
             <div style={styles.logoSmall}>🔗 Connect the Dots</div>
-            <p style={styles.welcome}>{userData?.name}, {userData?.age}</p>
+            <p style={styles.welcome}>
+              {userData?.name}, {userData?.age}
+              {isGoogleUser && <span style={styles.googleBadge}> G</span>}
+            </p>
           </div>
-          <button 
-            onClick={handleLogout} 
-            style={styles.logoutBtn}
-            onTouchStart={(e) => createRipple(e, 'logout')}
-          >Logout</button>
+          <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
         </div>
 
         <div style={styles.tabs}>
-          <button 
-            onClick={() => setView('swipe')} 
-            style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}
-            onTouchStart={(e) => createRipple(e, 'tab-swipe')}
-          >
+          <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>
             🔍 Swipe
           </button>
-          <button 
-            onClick={() => setView('matches')} 
-            style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}
-            onTouchStart={(e) => createRipple(e, 'tab-matches')}
-          >
+          <button onClick={() => setView('matches')} style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}>
             💬 Matches ({mutualMatches.length})
             {hasNewLikes && <span style={styles.newBadge}>!</span>}
           </button>
@@ -354,18 +403,14 @@ export default function App() {
                 <div style={styles.emptyEmoji}>🎉</div>
                 <h3>No more profiles!</h3>
                 <p>Check your matches or come back later</p>
-                <button 
-                  onClick={() => setView('matches')} 
-                  style={styles.resetBtn}
-                  onTouchStart={(e) => createRipple(e, 'reset')}
-                >View Matches →</button>
+                <button onClick={() => setView('matches')} style={styles.resetBtn}>View Matches →</button>
               </div>
             ) : (
               <div 
                 style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'translateX(0px) rotate(0deg)', transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)'}}
-                onTouchStart={(e) => handleTouchStart(e, currentProfile.email, 'swipe')}
+                onTouchStart={(e) => handleTouchStart(e, currentProfile.email)}
                 onTouchMove={handleTouchMove}
-                onTouchEnd={() => handleTouchEnd(currentProfile.email, () => handleLike(currentProfile.email))}
+                onTouchEnd={() => handleTouchEnd(currentProfile.email)}
               >
                 <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>
                 <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
@@ -378,6 +423,10 @@ export default function App() {
                 )}
               </div>
             )}
+            <div style={styles.actionButtons}>
+              <button onClick={() => otherUsers[0] && handlePass(otherUsers[0].email)} style={styles.nopeCircle}>✕</button>
+              <button onClick={() => otherUsers[0] && handleLike(otherUsers[0].email)} style={styles.likeCircle}>♥</button>
+            </div>
           </>
         )}
 
@@ -388,11 +437,7 @@ export default function App() {
                 <div style={styles.emptyEmoji}>💔</div>
                 <h3>No matches yet</h3>
                 <p>Like some profiles to find your match!</p>
-                <button 
-                  onClick={() => setView('swipe')} 
-                  style={styles.resetBtn}
-                  onTouchStart={(e) => createRipple(e, 'reset-matches')}
-                >Start Swiping →</button>
+                <button onClick={() => setView('swipe')} style={styles.resetBtn}>Start Swiping →</button>
               </div>
             ) : (
               <>
@@ -409,11 +454,7 @@ export default function App() {
                             <div style={styles.matchName}>{user.name}, {user.age}</div>
                             <div style={styles.matchVibe}>{user.vibe}</div>
                           </div>
-                          <button 
-                            onClick={() => handleLike(email)} 
-                            style={styles.likeBackBtn}
-                            onTouchStart={(e) => createRipple(e, 'likeback')}
-                          >Like Back ❤️</button>
+                          <button onClick={() => handleLike(email)} style={styles.likeBackBtn}>Like Back ❤️</button>
                         </div>
                       );
                     })}
@@ -444,11 +485,7 @@ export default function App() {
         )}
 
         <div style={styles.settingsSection}>
-          <button 
-            onClick={deleteAccount} 
-            style={styles.dangerBtn}
-            onTouchStart={(e) => createRipple(e, 'delete')}
-          >🗑️ Delete Account</button>
+          <button onClick={deleteAccount} style={styles.dangerBtn}>🗑️ Delete Account</button>
         </div>
       </div>
     </div>
@@ -474,7 +511,6 @@ const styles = {
     maxWidth: 400,
     textAlign: 'center',
     boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
-    transition: 'all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
   },
   appCard: {
     background: 'rgba(255, 255, 255, 0.06)',
@@ -499,10 +535,29 @@ const styles = {
     overflow: 'hidden',
     boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
   },
-  logo: { fontSize: 64, marginBottom: 16, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))', animation: 'float 3s ease-in-out infinite' },
+  logo: { fontSize: 64, marginBottom: 16, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
   logoSmall: { fontSize: 16, fontWeight: '600', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   title: { fontSize: 28, fontWeight: '700', marginBottom: 8, background: 'linear-gradient(135deg, #fff, #cbd5e1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   subtitle: { color: 'rgba(255,255,255,0.5)', marginBottom: 32 },
+  googleButton: {
+    background: 'rgba(255,255,255,0.95)',
+    border: 'none',
+    borderRadius: 50,
+    padding: 14,
+    fontSize: 16,
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 20,
+    color: '#333',
+    transition: 'transform 0.15s ease',
+  },
+  divider: { display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' },
+  dividerLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.2)' },
+  dividerText: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
   input: {
     width: '100%',
     padding: 16,
@@ -514,7 +569,6 @@ const styles = {
     background: 'rgba(255,255,255,0.05)',
     color: 'white',
     outline: 'none',
-    transition: 'all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
   },
   button: {
     background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)',
@@ -526,49 +580,53 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     width: '100%',
-    transition: 'transform 0.15s cubic-bezier(0.2, 0.9, 0.4, 1.1), box-shadow 0.15s ease',
+    transition: 'transform 0.15s ease',
   },
   switchText: { marginTop: 20, fontSize: 14, color: 'rgba(255,255,255,0.5)' },
   linkButton: { background: 'none', border: 'none', color: '#FF4D6D', fontWeight: '600', cursor: 'pointer' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   welcome: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.7)', marginTop: 4 },
-  logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12, transition: 'all 0.2s ease' },
+  googleBadge: { marginLeft: 6, fontSize: 10, background: '#4285F4', padding: '2px 6px', borderRadius: 10, color: 'white' },
+  logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12 },
   tabs: { display: 'flex', gap: 10, marginBottom: 20 },
-  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, transition: 'all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1)', position: 'relative' },
+  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, position: 'relative' },
   newBadge: { position: 'absolute', top: -5, right: 10, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 6px', fontSize: 10, fontWeight: 'bold' },
-  swipeCard: { 
-    background: 'rgba(255,255,255,0.1)', 
-    backdropFilter: 'blur(10px)', 
-    borderRadius: 48, 
-    padding: 32, 
-    textAlign: 'center', 
-    marginBottom: 24, 
-    boxShadow: '0 8px 32px rgba(0,0,0,0.1)', 
-    border: '1px solid rgba(255,255,255,0.1)', 
-    cursor: 'grab', 
-    transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)', 
-    position: 'relative' 
+  swipeCard: {
+    background: 'rgba(255,255,255,0.1)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: 48,
+    padding: 32,
+    textAlign: 'center',
+    marginBottom: 24,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    cursor: 'grab',
+    transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
+    position: 'relative'
   },
   profilePhoto: { fontSize: 80, marginBottom: 16, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
   swipeName: { fontSize: 28, fontWeight: '700', marginBottom: 4, color: 'white' },
   swipeVibe: { color: '#FF4D6D', fontWeight: '600', fontSize: 14, marginBottom: 8 },
   swipeBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic', lineHeight: 1.5 },
   dragIndicator: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 32, fontWeight: 'bold', color: 'white', textShadow: '0 0 20px rgba(0,0,0,0.5)', pointerEvents: 'none', whiteSpace: 'nowrap' },
+  actionButtons: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 },
+  nopeCircle: { width: 64, height: 64, borderRadius: 32, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', fontSize: 28, color: '#FF4D6D', cursor: 'pointer', transition: 'transform 0.15s ease' },
+  likeCircle: { width: 72, height: 72, borderRadius: 36, background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', border: 'none', fontSize: 32, color: 'white', cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,77,109,0.3)', transition: 'transform 0.15s ease' },
   emptyState: { textAlign: 'center', padding: 40 },
   emptyEmoji: { fontSize: 60, marginBottom: 16 },
-  resetBtn: { marginTop: 16, padding: '10px 24px', background: '#FF4D6D', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer', fontWeight: '600', transition: 'transform 0.15s ease' },
+  resetBtn: { marginTop: 16, padding: '10px 24px', background: '#FF4D6D', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer', fontWeight: '600' },
   likesSection: { marginBottom: 20 },
   matchesSection: {},
   sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 12, color: 'rgba(255,255,255,0.7)' },
-  matchItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'transform 0.1s ease' },
+  matchItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' },
   matchEmoji: { fontSize: 40, minWidth: 50, textAlign: 'center' },
   matchInfo: { flex: 1 },
   matchName: { fontWeight: 'bold', fontSize: 15, color: 'white' },
   matchVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
-  chatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontWeight: '600', transition: 'transform 0.15s ease' },
-  likeBackBtn: { background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontWeight: '600', transition: 'transform 0.15s ease' },
-  chatHeader: { padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 16, background: 'transparent' },
-  backButton: { background: 'rgba(255,255,255,0.1)', border: 'none', fontSize: 24, cursor: 'pointer', color: 'white', width: 40, height: 40, borderRadius: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' },
+  chatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontWeight: '600' },
+  likeBackBtn: { background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontWeight: '600' },
+  chatHeader: { padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 16 },
+  backButton: { background: 'rgba(255,255,255,0.1)', border: 'none', fontSize: 24, cursor: 'pointer', color: 'white', width: 40, height: 40, borderRadius: 30 },
   chatUser: { display: 'flex', alignItems: 'center', gap: 12, flex: 1 },
   chatEmoji: { fontSize: 44 },
   chatName: { fontWeight: 'bold', fontSize: 16, color: 'white' },
@@ -576,13 +634,13 @@ const styles = {
   chatMessages: { flex: 1, overflowY: 'auto', padding: 16 },
   icebreaker: { textAlign: 'center', padding: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 32, marginBottom: 16 },
   icebreakerText: { marginBottom: 12, color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-  icebreakerBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 50, cursor: 'pointer', fontSize: 14, fontWeight: '600', transition: 'transform 0.15s ease' },
+  icebreakerBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 50, cursor: 'pointer', fontSize: 14, fontWeight: '600' },
   message: { display: 'flex', marginBottom: 12 },
-  messageBubble: { maxWidth: '70%', padding: '10px 14px', borderRadius: 24, fontSize: 14, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
+  messageBubble: { maxWidth: '70%', padding: '10px 14px', borderRadius: 24, fontSize: 14 },
   messageTime: { fontSize: 10, opacity: 0.6, marginTop: 4 },
   chatInput: { padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 10 },
   chatInputField: { flex: 1, padding: 14, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 40, fontSize: 14, outline: 'none', background: 'rgba(255,255,255,0.05)', color: 'white' },
-  sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: '600', transition: 'transform 0.15s ease' },
+  sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: '600' },
   settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center' },
-  dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600', transition: 'all 0.2s ease' }
+  dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600' }
 };
