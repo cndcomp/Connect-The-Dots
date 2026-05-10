@@ -2,65 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
 
-// World data structure
 const WORLD_DATA = {
-  '🌍 Africa': {
-    countries: {
-      'Nigeria': ['Lagos', 'Abuja', 'Kano'],
-      'Egypt': ['Cairo', 'Alexandria', 'Giza'],
-      'South Africa': ['Johannesburg', 'Cape Town', 'Durban'],
-      'Kenya': ['Nairobi', 'Mombasa', 'Kisumu'],
-      'Morocco': ['Casablanca', 'Rabat', 'Marrakech'],
-    }
-  },
-  '🌏 Asia': {
-    countries: {
-      'India': ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'],
-      'China': ['Shanghai', 'Beijing', 'Shenzhen', 'Guangzhou'],
-      'Japan': ['Tokyo', 'Osaka', 'Kyoto', 'Yokohama'],
-      'South Korea': ['Seoul', 'Busan', 'Incheon'],
-      'Thailand': ['Bangkok', 'Chiang Mai', 'Phuket'],
-      'Vietnam': ['Ho Chi Minh City', 'Hanoi', 'Da Nang'],
-      'Singapore': ['Singapore'],
-      'Malaysia': ['Kuala Lumpur', 'Penang'],
-      'Indonesia': ['Jakarta', 'Bali'],
-    }
-  },
-  '🌎 Europe': {
-    countries: {
-      'United Kingdom': ['London', 'Manchester', 'Birmingham'],
-      'Germany': ['Berlin', 'Munich', 'Hamburg'],
-      'France': ['Paris', 'Lyon', 'Marseille'],
-      'Spain': ['Madrid', 'Barcelona', 'Seville'],
-      'Italy': ['Rome', 'Milan', 'Naples'],
-    }
-  },
-  '🌎 North America': {
-    countries: {
-      'United States': ['New York', 'Los Angeles', 'Chicago', 'Miami', 'Boston', 'Seattle', 'Austin'],
-      'Canada': ['Toronto', 'Vancouver', 'Montreal'],
-      'Mexico': ['Mexico City', 'Cancun', 'Guadalajara'],
-    }
-  },
-  '🌎 South America': {
-    countries: {
-      'Brazil': ['São Paulo', 'Rio de Janeiro', 'Brasília'],
-      'Argentina': ['Buenos Aires', 'Córdoba'],
-      'Colombia': ['Bogotá', 'Medellín'],
-    }
-  },
-  '🌏 Oceania': {
-    countries: {
-      'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth'],
-      'New Zealand': ['Auckland', 'Wellington'],
-    }
-  }
+  '🌍 Africa': { countries: { 'Nigeria': ['Lagos', 'Abuja'], 'Egypt': ['Cairo', 'Alexandria'], 'South Africa': ['Johannesburg', 'Cape Town'], 'Kenya': ['Nairobi', 'Mombasa'] } },
+  '🌏 Asia': { countries: { 'India': ['Mumbai', 'Delhi', 'Bangalore'], 'China': ['Shanghai', 'Beijing'], 'Japan': ['Tokyo', 'Osaka'], 'South Korea': ['Seoul', 'Busan'], 'Thailand': ['Bangkok', 'Chiang Mai'], 'Singapore': ['Singapore'] } },
+  '🌎 Europe': { countries: { 'United Kingdom': ['London', 'Manchester'], 'Germany': ['Berlin', 'Munich'], 'France': ['Paris', 'Lyon'], 'Spain': ['Madrid', 'Barcelona'], 'Italy': ['Rome', 'Milan'] } },
+  '🌎 North America': { countries: { 'United States': ['New York', 'Los Angeles', 'Chicago'], 'Canada': ['Toronto', 'Vancouver'], 'Mexico': ['Mexico City', 'Cancun'] } },
+  '🌎 South America': { countries: { 'Brazil': ['São Paulo', 'Rio de Janeiro'], 'Argentina': ['Buenos Aires'], 'Colombia': ['Bogotá'] } },
+  '🌏 Oceania': { countries: { 'Australia': ['Sydney', 'Melbourne'], 'New Zealand': ['Auckland'] } }
 };
 
-const LGBTQ_OPTIONS = [
-  '🏳️‍🌈 Straight', '🏳️‍🌈 Gay', '🏳️‍🌈 Lesbian', '🏳️‍🌈 Bisexual',
-  '🏳️‍🌈 Pansexual', '🏳️‍🌈 Asexual', '🏳️‍🌈 Queer', '🏳️‍🌈 Questioning', '🏳️‍🌈 Prefer not to say'
-];
+const LGBTQ_OPTIONS = ['🏳️‍🌈 Straight', '🏳️‍🌈 Gay', '🏳️‍🌈 Lesbian', '🏳️‍🌈 Bisexual', '🏳️‍🌈 Pansexual', '🏳️‍🌈 Asexual', '🏳️‍🌈 Queer', '🏳️‍🌈 Questioning', '🏳️‍🌈 Prefer not to say'];
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -113,7 +64,6 @@ export default function App() {
   const [tapTimeout, setTapTimeout] = useState(null);
   
   const fileInputRef = useRef(null);
-
   const interestOptions = ['🎨 Art', '🏏 Cricket', '🍛 Food', '🎬 Movies', '🎵 Music', '✈️ Travel', '📚 Reading', '🧘 Wellness', '💻 Tech', '🎮 Gaming', '🏋️ Gym', '☕ Chai'];
 
   const [allUsers, setAllUsers] = useState(() => {
@@ -171,28 +121,14 @@ export default function App() {
   };
 
   const toggleInterest = (interest) => {
-    setInterests(prev => 
-      prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
-    );
+    setInterests(prev => prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]);
   };
 
   const handleNextStep = () => {
-    if (signupStep === 1 && (!name || !age)) {
-      alert('Please tell us your name and age!');
-      return;
-    }
-    if (signupStep === 2 && (!vibe || !bio)) {
-      alert('Tell us a bit about yourself!');
-      return;
-    }
-    if (signupStep === 3 && (!continent || !country || !city)) {
-      alert('Please select your location (continent → country → city)!');
-      return;
-    }
-    if (signupStep === 4 && (!sexuality)) {
-      alert('Please select how you identify!');
-      return;
-    }
+    if (signupStep === 1 && (!name || !age)) { alert('Please tell us your name and age!'); return; }
+    if (signupStep === 2 && (!vibe || !bio)) { alert('Tell us a bit about yourself!'); return; }
+    if (signupStep === 3 && (!continent || !country || !city)) { alert('Please select your location!'); return; }
+    if (signupStep === 4 && (!sexuality)) { alert('Please select how you identify!'); return; }
     setSignupStep(signupStep + 1);
   };
 
@@ -201,10 +137,7 @@ export default function App() {
 
   const handleSignup = (e) => {
     e.preventDefault();
-    if (allUsers[email]) {
-      alert('Account already exists!');
-      return;
-    }
+    if (allUsers[email]) { alert('Account already exists!'); return; }
     const newUser = {
       email, password, name, age: parseInt(age) || 25,
       bio: bio || "New to Connect the Dots!",
@@ -261,10 +194,7 @@ export default function App() {
   };
 
   const handleGoogleLogin = () => {
-    if (typeof window.google === 'undefined') {
-      alert('Google login loading. Please try again.');
-      return;
-    }
+    if (typeof window.google === 'undefined') { alert('Google login loading. Please try again.'); return; }
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: 'email profile openid',
@@ -421,22 +351,14 @@ export default function App() {
 
   const Logo = () => (
     <div style={styles.logoContainer} onClick={handleLogoClick}>
-      {!logoError ? (
-        <img src="/logo.png" alt="Logo" style={styles.logoImage} onError={() => setLogoError(true)} />
-      ) : (
-        <span style={styles.logoFallback}>🔗✨</span>
-      )}
+      {!logoError ? <img src="/logo.png" alt="Logo" style={styles.logoImage} onError={() => setLogoError(true)} /> : <span style={styles.logoFallback}>🔗✨</span>}
       <div style={styles.logoHint}>✨ tap 5 times ✨</div>
     </div>
   );
 
   const SmallLogo = () => (
     <div style={styles.smallLogoContainer}>
-      {!logoError ? (
-        <img src="/logo.png" alt="Logo" style={styles.smallLogoImage} onError={() => setLogoError(true)} />
-      ) : (
-        <span style={styles.smallLogoFallback}>🔗</span>
-      )}
+      {!logoError ? <img src="/logo.png" alt="Logo" style={styles.smallLogoImage} onError={() => setLogoError(true)} /> : <span style={styles.smallLogoFallback}>🔗</span>}
       <span style={styles.smallLogoText}>Connect the Dots</span>
     </div>
   );
@@ -451,11 +373,7 @@ export default function App() {
           <div style={styles.chatHeader}>
             <button onClick={() => setActiveChat(null)} style={styles.backButton}>←</button>
             <div style={styles.chatUser}>
-              {match.profileImage ? (
-                <img src={match.profileImage} alt={match.name} style={styles.chatImage} />
-              ) : (
-                <div style={styles.chatEmoji}>{match.profilePhoto || "😊"}</div>
-              )}
+              {match.profileImage ? <img src={match.profileImage} alt={match.name} style={styles.chatImage} /> : <div style={styles.chatEmoji}>{match.profilePhoto || "😊"}</div>}
               <div>
                 <div style={styles.chatName}>{match.name}, {match.age}</div>
                 <div style={styles.chatVibe}>{match.vibe}</div>
@@ -496,14 +414,8 @@ export default function App() {
           <Logo />
           <h1 style={styles.title}>Complete Your Profile</h1>
           <p style={styles.subtitle}>Welcome {pendingGoogleUser.name}! Just a few more details...</p>
-          
-          <div style={styles.progressBar}>
-            <div style={{...styles.progressFill, width: `${(signupStep / 4) * 100}%`}} />
-          </div>
-          <div style={styles.stepIndicators}>
-            {[1,2,3,4].map(s => (<div key={s} style={{...styles.stepDot, background: signupStep >= s ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>{s}</div>))}
-          </div>
-          
+          <div style={styles.progressBar}><div style={{...styles.progressFill, width: `${(signupStep / 4) * 100}%`}} /></div>
+          <div style={styles.stepIndicators}>{[1,2,3,4].map(s => (<div key={s} style={{...styles.stepDot, background: signupStep >= s ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>{s}</div>))}</div>
           <form onSubmit={handleCompleteGoogleProfile}>
             {signupStep === 1 && (
               <div>
@@ -533,72 +445,23 @@ export default function App() {
                   <button type="button" onClick={() => setShowContinentDropdown(!showContinentDropdown)} style={styles.locationButton}>
                     {continent || '🌍 Select Continent'} <span>▼</span>
                   </button>
-                  {showContinentDropdown && (
-                    <div style={styles.locationDropdown}>
-                      {Object.keys(WORLD_DATA).map(cont => (
-                        <div key={cont} onClick={() => { setContinent(cont); setCountry(''); setCity(''); setShowContinentDropdown(false); }} style={styles.locationOption}>{cont}</div>
-                      ))}
-                    </div>
-                  )}
+                  {showContinentDropdown && (<div style={styles.locationDropdown}>{Object.keys(WORLD_DATA).map(cont => (<div key={cont} onClick={() => { setContinent(cont); setCountry(''); setCity(''); setShowContinentDropdown(false); }} style={styles.locationOption}>{cont}</div>))}</div>)}
                 </div>
-                {continent && (
-                  <div style={styles.locationDropdownContainer}>
-                    <button type="button" onClick={() => setShowCountryDropdown(!showCountryDropdown)} style={styles.locationButton}>
-                      {country || '🌍 Select Country'} <span>▼</span>
-                    </button>
-                    {showCountryDropdown && (
-                      <div style={styles.locationDropdown}>
-                        {getAvailableCountries().map(c => (
-                          <div key={c} onClick={() => { setCountry(c); setCity(''); setShowCountryDropdown(false); }} style={styles.locationOption}>{c}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {country && (
-                  <div style={styles.locationDropdownContainer}>
-                    <button type="button" onClick={() => setShowCityDropdown(!showCityDropdown)} style={styles.locationButton}>
-                      {city || '🌍 Select City'} <span>▼</span>
-                    </button>
-                    {showCityDropdown && (
-                      <div style={styles.locationDropdown}>
-                        {getAvailableCities().map(c => (
-                          <div key={c} onClick={() => { setCity(c); setShowCityDropdown(false); }} style={styles.locationOption}>{c}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {continent && country && city && (
-                  <div style={styles.selectedLocation}>
-                    📍 Selected: {continent} · {country} · {city}
-                    <button type="button" onClick={resetLocationSelection} style={styles.resetLocationBtn}>Change</button>
-                  </div>
-                )}
-                <div style={styles.buttonGroup}>
-                  <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                  <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
-                </div>
+                {continent && (<div style={styles.locationDropdownContainer}><button type="button" onClick={() => setShowCountryDropdown(!showCountryDropdown)} style={styles.locationButton}>{country || '🌍 Select Country'} <span>▼</span></button>
+                {showCountryDropdown && (<div style={styles.locationDropdown}>{getAvailableCountries().map(c => (<div key={c} onClick={() => { setCountry(c); setCity(''); setShowCountryDropdown(false); }} style={styles.locationOption}>{c}</div>))}</div>)}</div>)}
+                {country && (<div style={styles.locationDropdownContainer}><button type="button" onClick={() => setShowCityDropdown(!showCityDropdown)} style={styles.locationButton}>{city || '🌍 Select City'} <span>▼</span></button>
+                {showCityDropdown && (<div style={styles.locationDropdown}>{getAvailableCities().map(c => (<div key={c} onClick={() => { setCity(c); setShowCityDropdown(false); }} style={styles.locationOption}>{c}</div>))}</div>)}</div>)}
+                {continent && country && city && (<div style={styles.selectedLocation}>📍 Selected: {continent} · {country} · {city}<button type="button" onClick={resetLocationSelection} style={styles.resetLocationBtn}>Change</button></div>)}
+                <div style={styles.buttonGroup}><button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button><button type="button" onClick={handleNextStep} style={styles.button}>Next →</button></div>
               </div>
             )}
             {signupStep === 4 && (
               <div>
                 <div style={styles.locationDropdownContainer}>
-                  <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>
-                    {sexuality || '🏳️‍🌈 Select your identity'} <span>▼</span>
-                  </button>
-                  {showSexualityDropdown && (
-                    <div style={styles.locationDropdown}>
-                      {LGBTQ_OPTIONS.map(opt => (
-                        <div key={opt} onClick={() => { setSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>{opt}</div>
-                      ))}
-                    </div>
-                  )}
+                  <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>{sexuality || '🏳️‍🌈 Select your identity'} <span>▼</span></button>
+                  {showSexualityDropdown && (<div style={styles.locationDropdown}>{LGBTQ_OPTIONS.map(opt => (<div key={opt} onClick={() => { setSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>{opt}</div>))}</div>)}
                 </div>
-                <div style={styles.buttonGroup}>
-                  <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                  <button type="submit" style={styles.button}>Finish & Start →</button>
-                </div>
+                <div style={styles.buttonGroup}><button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button><button type="submit" style={styles.button}>Finish & Start →</button></div>
               </div>
             )}
           </form>
@@ -615,7 +478,6 @@ export default function App() {
           <Logo />
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Find your perfect match anywhere in the world</p>
-          
           {!showSignup ? (
             <>
               <button onClick={handleGoogleLogin} style={styles.googleButton}><span style={{ fontSize: 20, marginRight: 12 }}>G</span>Continue with Google</button>
@@ -630,10 +492,7 @@ export default function App() {
           ) : (
             <>
               <div style={styles.progressBar}><div style={{...styles.progressFill, width: `${(signupStep / 4) * 100}%`}} /></div>
-              <div style={styles.stepIndicators}>
-                {[1,2,3,4].map(s => (<div key={s} style={{...styles.stepDot, background: signupStep >= s ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>{s}</div>))}
-              </div>
-              
+              <div style={styles.stepIndicators}>{[1,2,3,4].map(s => (<div key={s} style={{...styles.stepDot, background: signupStep >= s ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>{s}</div>))}</div>
               <form onSubmit={handleSignup}>
                 {signupStep === 1 && (
                   <div>
@@ -652,93 +511,33 @@ export default function App() {
                     <input style={styles.input} placeholder="Your vibe" value={vibe} onChange={(e) => setVibe(e.target.value)} />
                     <textarea style={{...styles.input, minHeight: 80}} placeholder="Write a short bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
                     <h3 style={{...styles.stepTitle, fontSize: 14, marginTop: 16}}>What do you love? ❤️</h3>
-                    <div style={styles.interestsGrid}>
-                      {interestOptions.map(interest => (
-                        <button key={interest} type="button" onClick={() => toggleInterest(interest)} style={{...styles.interestBtn, background: interests.includes(interest) ? '#FF4D6D' : 'rgba(255,255,255,0.1)'}}>
-                          {interest}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={styles.buttonGroup}>
-                      <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                      <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
-                    </div>
+                    <div style={styles.interestsGrid}>{interestOptions.map(interest => (<button key={interest} type="button" onClick={() => toggleInterest(interest)} style={{...styles.interestBtn, background: interests.includes(interest) ? '#FF4D6D' : 'rgba(255,255,255,0.1)'}}>{interest}</button>))}</div>
+                    <div style={styles.buttonGroup}><button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button><button type="button" onClick={handleNextStep} style={styles.button}>Next →</button></div>
                   </div>
                 )}
                 {signupStep === 3 && (
                   <div>
                     <div style={styles.locationDropdownContainer}>
-                      <button type="button" onClick={() => setShowContinentDropdown(!showContinentDropdown)} style={styles.locationButton}>
-                        {continent || '🌍 Select Continent'} <span>▼</span>
-                      </button>
-                      {showContinentDropdown && (
-                        <div style={styles.locationDropdown}>
-                          {Object.keys(WORLD_DATA).map(cont => (
-                            <div key={cont} onClick={() => { setContinent(cont); setCountry(''); setCity(''); setShowContinentDropdown(false); }} style={styles.locationOption}>{cont}</div>
-                          ))}
-                        </div>
-                      )}
+                      <button type="button" onClick={() => setShowContinentDropdown(!showContinentDropdown)} style={styles.locationButton}>{continent || '🌍 Select Continent'} <span>▼</span></button>
+                      {showContinentDropdown && (<div style={styles.locationDropdown}>{Object.keys(WORLD_DATA).map(cont => (<div key={cont} onClick={() => { setContinent(cont); setCountry(''); setCity(''); setShowContinentDropdown(false); }} style={styles.locationOption}>{cont}</div>))}</div>)}
                     </div>
-                    {continent && (
-                      <div style={styles.locationDropdownContainer}>
-                        <button type="button" onClick={() => setShowCountryDropdown(!showCountryDropdown)} style={styles.locationButton}>
-                          {country || '🌍 Select Country'} <span>▼</span>
-                        </button>
-                        {showCountryDropdown && (
-                          <div style={styles.locationDropdown}>
-                            {getAvailableCountries().map(c => (
-                              <div key={c} onClick={() => { setCountry(c); setCity(''); setShowCountryDropdown(false); }} style={styles.locationOption}>{c}</div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {country && (
-                      <div style={styles.locationDropdownContainer}>
-                        <button type="button" onClick={() => setShowCityDropdown(!showCityDropdown)} style={styles.locationButton}>
-                          {city || '🌍 Select City'} <span>▼</span>
-                        </button>
-                        {showCityDropdown && (
-                          <div style={styles.locationDropdown}>
-                            {getAvailableCities().map(c => (
-                              <div key={c} onClick={() => { setCity(c); setShowCityDropdown(false); }} style={styles.locationOption}>{c}</div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {continent && country && city && (
-                      <div style={styles.selectedLocation}>
-                        📍 Selected: {continent} · {country} · {city}
-                        <button type="button" onClick={resetLocationSelection} style={styles.resetLocationBtn}>Change</button>
-                      </div>
-                    )}
-                    <div style={styles.buttonGroup}>
-                      <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                      <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
-                    </div>
+                    {continent && (<div style={styles.locationDropdownContainer}><button type="button" onClick={() => setShowCountryDropdown(!showCountryDropdown)} style={styles.locationButton}>{country || '🌍 Select Country'} <span>▼</span></button>
+                    {showCountryDropdown && (<div style={styles.locationDropdown}>{getAvailableCountries().map(c => (<div key={c} onClick={() => { setCountry(c); setCity(''); setShowCountryDropdown(false); }} style={styles.locationOption}>{c}</div>))}</div>)}</div>)}
+                    {country && (<div style={styles.locationDropdownContainer}><button type="button" onClick={() => setShowCityDropdown(!showCityDropdown)} style={styles.locationButton}>{city || '🌍 Select City'} <span>▼</span></button>
+                    {showCityDropdown && (<div style={styles.locationDropdown}>{getAvailableCities().map(c => (<div key={c} onClick={() => { setCity(c); setShowCityDropdown(false); }} style={styles.locationOption}>{c}</div>))}</div>)}</div>)}
+                    {continent && country && city && (<div style={styles.selectedLocation}>📍 Selected: {continent} · {country} · {city}<button type="button" onClick={resetLocationSelection} style={styles.resetLocationBtn}>Change</button></div>)}
+                    <div style={styles.buttonGroup}><button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button><button type="button" onClick={handleNextStep} style={styles.button}>Next →</button></div>
                   </div>
                 )}
                 {signupStep === 4 && (
                   <div>
                     <div style={styles.locationDropdownContainer}>
-                      <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>
-                        {sexuality || '🏳️‍🌈 Select your identity'} <span>▼</span>
-                      </button>
-                      {showSexualityDropdown && (
-                        <div style={styles.locationDropdown}>
-                          {LGBTQ_OPTIONS.map(opt => (
-                            <div key={opt} onClick={() => { setSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>{opt}</div>
-                          ))}
-                        </div>
-                      )}
+                      <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>{sexuality || '🏳️‍🌈 Select your identity'} <span>▼</span></button>
+                      {showSexualityDropdown && (<div style={styles.locationDropdown}>{LGBTQ_OPTIONS.map(opt => (<div key={opt} onClick={() => { setSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>{opt}</div>))}</div>)}
                     </div>
                     <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                    <div style={styles.buttonGroup}>
-                      <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                      <button type="submit" style={styles.button}>Finish & Start →</button>
-                    </div>
+                    <div style={styles.buttonGroup}><button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button><button type="submit" style={styles.button}>Finish & Start →</button></div>
                   </div>
                 )}
               </form>
@@ -746,7 +545,6 @@ export default function App() {
             </>
           )}
         </div>
-        
         {secretMode && (
           <div style={styles.modalOverlay}>
             <div style={styles.modalCard}>
@@ -763,7 +561,6 @@ export default function App() {
             </div>
           </div>
         )}
-        
         {showToilet && (
           <div style={styles.modalOverlay}>
             <div style={styles.toiletCard}>
@@ -789,17 +586,12 @@ export default function App() {
           <div style={styles.header}>
             <SmallLogo />
             <div style={styles.headerRight}>
-              <button onClick={() => setShowFilters(true)} style={{...styles.settingsBtn, background: activeFilterCount > 0 ? '#FF4D6D' : 'rgba(255,255,255,0.1)'}}>
-                🎯 {activeFilterCount > 0 && <span style={styles.filterBadge}>{activeFilterCount}</span>}
-              </button>
+              <button onClick={() => setShowFilters(true)} style={{...styles.settingsBtn, background: activeFilterCount > 0 ? '#FF4D6D' : 'rgba(255,255,255,0.1)'}}>🎯 {activeFilterCount > 0 && <span style={styles.filterBadge}>{activeFilterCount}</span>}</button>
               <button onClick={() => setShowSettings(true)} style={styles.settingsBtn}>⚙️</button>
               <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
             </div>
           </div>
-          <div style={styles.userLocation}>
-            {userData?.location && <span>📍 {userData.location}</span>}
-            {userData?.sexuality && <span style={styles.userSexuality}> · {userData.sexuality}</span>}
-          </div>
+          <div style={styles.userLocation}>{userData?.location && <span>📍 {userData.location}</span>}{userData?.sexuality && <span style={styles.userSexuality}> · {userData.sexuality}</span>}</div>
           <div style={styles.tabs}>
             <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>🔍 Swipe</button>
             <button onClick={() => setView('matches')} style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}>💬 Matches ({mutualMatches.length}){hasNewLikes && <span style={styles.newBadge}>!</span>}</button>
@@ -807,11 +599,7 @@ export default function App() {
           {view === 'swipe' && (
             <>
               {filteredOtherUsers.length === 0 ? (
-                <div style={styles.emptyState}>
-                  <div style={styles.emptyEmoji}>🎉</div>
-                  <h3>No more profiles!</h3>
-                  <button onClick={() => setShowFilters(true)} style={styles.resetBtn}>Adjust Filters →</button>
-                </div>
+                <div style={styles.emptyState}><div style={styles.emptyEmoji}>🎉</div><h3>No more profiles!</h3><button onClick={() => setShowFilters(true)} style={styles.resetBtn}>Adjust Filters →</button></div>
               ) : (
                 <div style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'none'}}
                   onMouseDown={(e) => handleDragStart(e, currentProfile.email)}
@@ -821,21 +609,13 @@ export default function App() {
                   onTouchMove={handleDragMove}
                   onTouchEnd={() => handleDragEnd(currentProfile.email)}>
                   <div style={styles.profilePhotoContainer}>
-                    {currentProfile.profileImage ? (
-                      <img src={currentProfile.profileImage} alt={currentProfile.name} style={styles.profilePhotoImg} />
-                    ) : (
-                      <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>
-                    )}
+                    {currentProfile.profileImage ? <img src={currentProfile.profileImage} alt={currentProfile.name} style={styles.profilePhotoImg} /> : <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>}
                   </div>
                   <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
                   <p style={styles.swipeVibe}>{currentProfile.vibe}</p>
                   {currentProfile.location && <p style={styles.swipeLocation}>📍 {currentProfile.location}</p>}
                   <p style={styles.swipeBio}>"{currentProfile.bio}"</p>
-                  {isDragging && (
-                    <div style={{...styles.dragIndicator, opacity: Math.min(Math.abs(touchX) / 80, 0.8)}}>
-                      {touchX > 0 ? '♥ LIKE' : '✕ NOPE'}
-                    </div>
-                  )}
+                  {isDragging && (<div style={{...styles.dragIndicator, opacity: Math.min(Math.abs(touchX) / 80, 0.8)}}>{touchX > 0 ? '♥ LIKE' : '✕ NOPE'}</div>)}
                 </div>
               )}
               <div style={styles.actionButtons}>
@@ -847,11 +627,7 @@ export default function App() {
           {view === 'matches' && (
             <>
               {mutualMatches.length === 0 && likedBy.filter(email => !myLikes.includes(email)).length === 0 ? (
-                <div style={styles.emptyState}>
-                  <div style={styles.emptyEmoji}>💔</div>
-                  <h3>No matches yet</h3>
-                  <button onClick={() => setView('swipe')} style={styles.resetBtn}>Start Swiping →</button>
-                </div>
+                <div style={styles.emptyState}><div style={styles.emptyEmoji}>💔</div><h3>No matches yet</h3><button onClick={() => setView('swipe')} style={styles.resetBtn}>Start Swiping →</button></div>
               ) : (
                 <>
                   {likedBy.filter(email => !myLikes.includes(email)).length > 0 && (
@@ -863,11 +639,7 @@ export default function App() {
                         return (
                           <div key={email} style={styles.matchItem}>
                             {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
-                            <div style={styles.matchInfo}>
-                              <div style={styles.matchName}>{user.name}, {user.age}</div>
-                              <div style={styles.matchVibe}>{user.vibe}</div>
-                              {user.location && <div style={styles.matchLocation}>📍 {user.location}</div>}
-                            </div>
+                            <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div>{user.location && <div style={styles.matchLocation}>📍 {user.location}</div>}</div>
                             <button onClick={() => handleLike(email)} style={styles.likeBackBtn}>Like Back ❤️</button>
                           </div>
                         );
@@ -883,11 +655,7 @@ export default function App() {
                         return (
                           <div key={email} style={styles.matchItem} onClick={() => setActiveChat(user)}>
                             {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
-                            <div style={styles.matchInfo}>
-                              <div style={styles.matchName}>{user.name}, {user.age}</div>
-                              <div style={styles.matchVibe}>{user.vibe}</div>
-                              {user.location && <div style={styles.matchLocation}>📍 {user.location}</div>}
-                            </div>
+                            <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div>{user.location && <div style={styles.matchLocation}>📍 {user.location}</div>}</div>
                             <button style={styles.chatBtn}>💬 Chat</button>
                           </div>
                         );
@@ -905,25 +673,13 @@ export default function App() {
       {showFilters && (
         <div style={styles.modalOverlay} onClick={() => setShowFilters(false)}>
           <div style={styles.settingsModal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.settingsHeader}>
-              <h2 style={styles.settingsTitle}>Filter Matches</h2>
-              <button onClick={() => setShowFilters(false)} style={styles.closeSettingsBtn}>✕</button>
-            </div>
+            <div style={styles.settingsHeader}><h2 style={styles.settingsTitle}>Filter Matches</h2><button onClick={() => setShowFilters(false)} style={styles.closeSettingsBtn}>✕</button></div>
             <div style={styles.settingsContent}>
               <div style={styles.settingsSection}>
                 <h3 style={styles.settingsSectionTitle}>🌍 Location</h3>
                 <div style={styles.locationDropdownContainer}>
-                  <button type="button" onClick={() => setFilterShowLocationDropdown(!filterShowLocationDropdown)} style={styles.locationButton}>
-                    {filterContinent || 'Any Continent'} <span>▼</span>
-                  </button>
-                  {filterShowLocationDropdown && (
-                    <div style={styles.locationDropdown}>
-                      <div onClick={() => { setFilterContinent(''); setFilterCountry(''); setFilterCity(''); setFilterShowLocationDropdown(false); }} style={styles.locationOption}>🌍 Anywhere</div>
-                      {Object.keys(WORLD_DATA).map(cont => (
-                        <div key={cont} onClick={() => { setFilterContinent(cont); setFilterShowLocationDropdown(false); }} style={styles.locationOption}>{cont}</div>
-                      ))}
-                    </div>
-                  )}
+                  <button type="button" onClick={() => setFilterShowLocationDropdown(!filterShowLocationDropdown)} style={styles.locationButton}>{filterContinent || 'Any Continent'} <span>▼</span></button>
+                  {filterShowLocationDropdown && (<div style={styles.locationDropdown}><div onClick={() => { setFilterContinent(''); setFilterCountry(''); setFilterCity(''); setFilterShowLocationDropdown(false); }} style={styles.locationOption}>🌍 Anywhere</div>{Object.keys(WORLD_DATA).map(cont => (<div key={cont} onClick={() => { setFilterContinent(cont); setFilterShowLocationDropdown(false); }} style={styles.locationOption}>{cont}</div>))}</div>)}
                 </div>
               </div>
               <div style={styles.settingsSection}>
@@ -935,23 +691,11 @@ export default function App() {
               <div style={styles.settingsSection}>
                 <h3 style={styles.settingsSectionTitle}>🏳️‍🌈 Sexuality</h3>
                 <div style={styles.locationDropdownContainer}>
-                  <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>
-                    {filterSexuality || 'Any identity'} <span>▼</span>
-                  </button>
-                  {showSexualityDropdown && (
-                    <div style={styles.locationDropdown}>
-                      <div onClick={() => { setFilterSexuality(''); setShowSexualityDropdown(false); }} style={styles.locationOption}>🏳️‍🌈 Any identity</div>
-                      {LGBTQ_OPTIONS.map(opt => (
-                        <div key={opt} onClick={() => { setFilterSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>{opt}</div>
-                      ))}
-                    </div>
-                  )}
+                  <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>{filterSexuality || 'Any identity'} <span>▼</span></button>
+                  {showSexualityDropdown && (<div style={styles.locationDropdown}><div onClick={() => { setFilterSexuality(''); setShowSexualityDropdown(false); }} style={styles.locationOption}>🏳️‍🌈 Any identity</div>{LGBTQ_OPTIONS.map(opt => (<div key={opt} onClick={() => { setFilterSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>{opt}</div>))}</div>)}
                 </div>
               </div>
-              <div style={styles.buttonGroup}>
-                <button onClick={clearFilters} style={styles.secondaryButton}>Reset Filters</button>
-                <button onClick={() => setShowFilters(false)} style={styles.button}>Apply</button>
-              </div>
+              <div style={styles.buttonGroup}><button onClick={clearFilters} style={styles.secondaryButton}>Reset Filters</button><button onClick={() => setShowFilters(false)} style={styles.button}>Apply</button></div>
             </div>
           </div>
         </div>
@@ -961,10 +705,7 @@ export default function App() {
       {showSettings && (
         <div style={styles.modalOverlay} onClick={() => setShowSettings(false)}>
           <div style={styles.settingsModal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.settingsHeader}>
-              <h2 style={styles.settingsTitle}>Settings</h2>
-              <button onClick={() => setShowSettings(false)} style={styles.closeSettingsBtn}>✕</button>
-            </div>
+            <div style={styles.settingsHeader}><h2 style={styles.settingsTitle}>Settings</h2><button onClick={() => setShowSettings(false)} style={styles.closeSettingsBtn}>✕</button></div>
             <div style={styles.settingsContent}>
               <div style={styles.settingsSection}>
                 <h3 style={styles.settingsSectionTitle}>Account</h3>
