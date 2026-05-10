@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-// 👇 YOUR GOOGLE CLIENT ID - Already added!
+// 👇 YOUR GOOGLE CLIENT ID
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
 
 export default function App() {
@@ -21,6 +21,7 @@ export default function App() {
   const [touchX, setTouchX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [ripples, setRipples] = useState([]);
+  const [logoError, setLogoError] = useState(false);
 
   // Load all users from localStorage
   const [allUsers, setAllUsers] = useState(() => {
@@ -117,13 +118,10 @@ export default function App() {
             const googleName = userInfo.given_name || userInfo.name || googleEmail.split('@')[0];
             const googlePicture = userInfo.picture;
             
-            // Check if user already exists
             if (allUsers[googleEmail]) {
-              // Login existing user
               setCurrentUser({ email: googleEmail, name: allUsers[googleEmail].name });
               setLoggedIn(true);
             } else {
-              // Create new user
               const newUser = {
                 email: googleEmail,
                 password: 'google_oauth_' + Date.now(),
@@ -248,6 +246,39 @@ export default function App() {
     setTouchStart(null);
   };
 
+  // Logo Component
+  const Logo = () => (
+    <div style={styles.logoContainer}>
+      {!logoError ? (
+        <img 
+          src="/logo.png" 
+          alt="Connect the Dots Logo" 
+          style={styles.logoImage}
+          onError={() => setLogoError(true)}
+        />
+      ) : (
+        <span style={styles.logoFallback}>🔗✨</span>
+      )}
+    </div>
+  );
+
+  // Small Logo Component
+  const SmallLogo = () => (
+    <div style={styles.smallLogoContainer}>
+      {!logoError ? (
+        <img 
+          src="/logo.png" 
+          alt="Logo" 
+          style={styles.smallLogoImage}
+          onError={() => setLogoError(true)}
+        />
+      ) : (
+        <span style={styles.smallLogoFallback}>🔗</span>
+      )}
+      <span style={styles.smallLogoText}>Connect the Dots</span>
+    </div>
+  );
+
   // Chat Screen
   if (activeChat) {
     const match = activeChat;
@@ -314,11 +345,10 @@ export default function App() {
     return (
       <div style={styles.container}>
         <div style={styles.glassCard}>
-          <div style={styles.logo}>🔗✨</div>
+          <Logo />
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Indian Dating · Real Connections</p>
           
-          {/* Google Login Button */}
           <button 
             onClick={handleGoogleLogin} 
             style={styles.googleButton}
@@ -376,13 +406,7 @@ export default function App() {
     <div style={styles.container}>
       <div style={styles.appCard}>
         <div style={styles.header}>
-          <div>
-            <div style={styles.logoSmall}>🔗 Connect the Dots</div>
-            <p style={styles.welcome}>
-              {userData?.name}, {userData?.age}
-              {isGoogleUser && <span style={styles.googleBadge}> G</span>}
-            </p>
-          </div>
+          <SmallLogo />
           <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
         </div>
 
@@ -535,8 +559,13 @@ const styles = {
     overflow: 'hidden',
     boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
   },
-  logo: { fontSize: 64, marginBottom: 16, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
-  logoSmall: { fontSize: 16, fontWeight: '600', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  logoContainer: { marginBottom: 16 },
+  logoImage: { width: 80, height: 80, objectFit: 'contain', borderRadius: 20, margin: '0 auto' },
+  logoFallback: { fontSize: 64, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
+  smallLogoContainer: { display: 'flex', alignItems: 'center', gap: 8 },
+  smallLogoImage: { width: 32, height: 32, objectFit: 'contain' },
+  smallLogoFallback: { fontSize: 24 },
+  smallLogoText: { fontSize: 16, fontWeight: '600', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   title: { fontSize: 28, fontWeight: '700', marginBottom: 8, background: 'linear-gradient(135deg, #fff, #cbd5e1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   subtitle: { color: 'rgba(255,255,255,0.5)', marginBottom: 32 },
   googleButton: {
