@@ -2,12 +2,88 @@ import { useState, useEffect, useRef } from 'react';
 
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
 
-// Indian cities list
-const INDIAN_CITIES = [
-  'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad',
-  'Jaipur', 'Lucknow', 'Nagpur', 'Indore', 'Bhopal', 'Surat', 'Vadodara', 'Ludhiana',
-  'Agra', 'Nashik', 'Ranchi', 'Chandigarh', 'Goa', 'Kochi', 'Vizag', 'Coimbatore',
-  'Mysore', 'Udaipur', 'Amritsar', 'Guwahati', 'Bhubaneswar', 'Trivandrum'
+// World data structure
+const WORLD_DATA = {
+  '🌍 Africa': {
+    countries: {
+      'Nigeria': ['Lagos', 'Abuja', 'Kano'],
+      'Egypt': ['Cairo', 'Alexandria', 'Giza'],
+      'South Africa': ['Johannesburg', 'Cape Town', 'Durban'],
+      'Kenya': ['Nairobi', 'Mombasa', 'Kisumu'],
+      'Morocco': ['Casablanca', 'Rabat', 'Marrakech'],
+      'Ghana': ['Accra', 'Kumasi', 'Tamale'],
+    }
+  },
+  '🌏 Asia': {
+    countries: {
+      'India': ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'],
+      'China': ['Shanghai', 'Beijing', 'Shenzhen', 'Guangzhou'],
+      'Japan': ['Tokyo', 'Osaka', 'Kyoto', 'Yokohama'],
+      'South Korea': ['Seoul', 'Busan', 'Incheon'],
+      'Thailand': ['Bangkok', 'Chiang Mai', 'Phuket'],
+      'Vietnam': ['Ho Chi Minh City', 'Hanoi', 'Da Nang'],
+      'Indonesia': ['Jakarta', 'Bali', 'Surabaya'],
+      'Malaysia': ['Kuala Lumpur', 'Penang', 'Johor Bahru'],
+      'Singapore': ['Singapore'],
+      'Philippines': ['Manila', 'Cebu', 'Davao'],
+      'Pakistan': ['Karachi', 'Lahore', 'Islamabad'],
+      'Bangladesh': ['Dhaka', 'Chittagong'],
+      'Nepal': ['Kathmandu', 'Pokhara'],
+      'Sri Lanka': ['Colombo', 'Kandy'],
+    }
+  },
+  '🌎 Europe': {
+    countries: {
+      'United Kingdom': ['London', 'Manchester', 'Birmingham', 'Liverpool'],
+      'Germany': ['Berlin', 'Munich', 'Hamburg', 'Cologne'],
+      'France': ['Paris', 'Lyon', 'Marseille', 'Nice'],
+      'Spain': ['Madrid', 'Barcelona', 'Seville', 'Valencia'],
+      'Italy': ['Rome', 'Milan', 'Naples', 'Florence'],
+      'Netherlands': ['Amsterdam', 'Rotterdam', 'The Hague'],
+      'Sweden': ['Stockholm', 'Gothenburg', 'Malmö'],
+      'Norway': ['Oslo', 'Bergen', 'Trondheim'],
+      'Denmark': ['Copenhagen', 'Aarhus'],
+      'Finland': ['Helsinki', 'Espoo'],
+      'Switzerland': ['Zurich', 'Geneva', 'Bern'],
+      'Austria': ['Vienna', 'Salzburg', 'Innsbruck'],
+      'Belgium': ['Brussels', 'Antwerp', 'Ghent'],
+      'Portugal': ['Lisbon', 'Porto'],
+      'Greece': ['Athens', 'Thessaloniki'],
+      'Ireland': ['Dublin', 'Cork'],
+      'Poland': ['Warsaw', 'Krakow'],
+      'Czech Republic': ['Prague', 'Brno'],
+    }
+  },
+  '🌎 North America': {
+    countries: {
+      'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'Austin', 'Boston', 'Seattle', 'Denver', 'Miami', 'Atlanta'],
+      'Canada': ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', 'Edmonton'],
+      'Mexico': ['Mexico City', 'Guadalajara', 'Monterrey', 'Cancun'],
+    }
+  },
+  '🌎 South America': {
+    countries: {
+      'Brazil': ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador'],
+      'Argentina': ['Buenos Aires', 'Córdoba', 'Rosario'],
+      'Colombia': ['Bogotá', 'Medellín', 'Cali'],
+      'Chile': ['Santiago', 'Valparaíso'],
+      'Peru': ['Lima', 'Cusco'],
+      'Venezuela': ['Caracas', 'Maracaibo'],
+    }
+  },
+  '🌏 Oceania': {
+    countries: {
+      'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Canberra'],
+      'New Zealand': ['Auckland', 'Wellington', 'Christchurch'],
+      'Fiji': ['Suva', 'Nadi'],
+    }
+  }
+};
+
+// LGBTQ+ options
+const LGBTQ_OPTIONS = [
+  '🏳️‍🌈 Straight', '🏳️‍🌈 Gay', '🏳️‍🌈 Lesbian', '🏳️‍🌈 Bisexual', 
+  '🏳️‍🌈 Pansexual', '🏳️‍🌈 Asexual', '🏳️‍🌈 Queer', '🏳️‍🌈 Questioning', '🏳️‍🌈 Prefer not to say'
 ];
 
 export default function App() {
@@ -17,6 +93,10 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [signupStep, setSignupStep] = useState(1);
+  const [isCompletingProfile, setIsCompletingProfile] = useState(false);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState(null);
+  
+  // User data
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -26,16 +106,23 @@ export default function App() {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [interests, setInterests] = useState([]);
-  const [location, setLocation] = useState('');
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [locationSearch, setLocationSearch] = useState('');
+  const [continent, setContinent] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
+  const [sexuality, setSexuality] = useState('');
+  
+  // Location selection UI state
+  const [showContinentDropdown, setShowContinentDropdown] = useState(false);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
   
   // Filter states
-  const [filterLocation, setFilterLocation] = useState('');
+  const [filterContinent, setFilterContinent] = useState('');
+  const [filterCountry, setFilterCountry] = useState('');
+  const [filterCity, setFilterCity] = useState('');
   const [filterMinAge, setFilterMinAge] = useState(18);
   const [filterMaxAge, setFilterMaxAge] = useState(35);
-  const [filterShowLocationDropdown, setFilterShowLocationDropdown] = useState(false);
-  const [filterLocationSearch, setFilterLocationSearch] = useState('');
+  const [filterSexuality, setFilterSexuality] = useState('');
   
   const [activeChat, setActiveChat] = useState(null);
   const [inputText, setInputText] = useState('');
@@ -49,6 +136,11 @@ export default function App() {
   const [secretCode, setSecretCode] = useState('');
   const [showToilet, setShowToilet] = useState(false);
   const [tapTimeout, setTapTimeout] = useState(null);
+  
+  // Call state
+  const [activeCall, setActiveCall] = useState(null);
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
   
   const fileInputRef = useRef(null);
 
@@ -77,17 +169,43 @@ export default function App() {
   const myPasses = userData?.passes || [];
   const mutualMatches = myLikes.filter(id => likedBy.includes(id));
   
-  // Filter other users based on location and age preferences
+  // Get available countries for selected continent
+  const getAvailableCountries = () => {
+    if (!continent || !WORLD_DATA[continent]) return [];
+    return Object.keys(WORLD_DATA[continent].countries);
+  };
+
+  // Get available cities for selected country
+  const getAvailableCities = () => {
+    if (!continent || !country || !WORLD_DATA[continent]) return [];
+    return WORLD_DATA[continent].countries[country] || [];
+  };
+
+  // Format full location string
+  const getFullLocation = () => {
+    const parts = [];
+    if (continent) parts.push(continent);
+    if (country) parts.push(country);
+    if (city) parts.push(city);
+    return parts.join(' · ');
+  };
+
+  // Filter other users
   const filteredOtherUsers = Object.values(allUsers).filter(user => {
     if (user.email === currentUser?.email) return false;
     if (myPasses.includes(user.email)) return false;
     if (myLikes.includes(user.email)) return false;
     
-    // Location filter
-    if (filterLocation && user.location !== filterLocation) return false;
+    // Location filters
+    if (filterContinent && user.continent !== filterContinent) return false;
+    if (filterCountry && user.country !== filterCountry) return false;
+    if (filterCity && user.city !== filterCity) return false;
     
     // Age filter
     if (user.age < filterMinAge || user.age > filterMaxAge) return false;
+    
+    // Sexuality filter
+    if (filterSexuality && user.sexuality !== filterSexuality) return false;
     
     return true;
   });
@@ -118,8 +236,12 @@ export default function App() {
       alert('Tell us a bit about yourself!');
       return;
     }
-    if (signupStep === 3 && !location) {
-      alert('Please select your city!');
+    if (signupStep === 3 && (!continent || !country || !city)) {
+      alert('Please select your location (continent → country → city)!');
+      return;
+    }
+    if (signupStep === 4 && (!sexuality)) {
+      alert('Please select how you identify!');
       return;
     }
     setSignupStep(signupStep + 1);
@@ -129,13 +251,11 @@ export default function App() {
     setSignupStep(signupStep - 1);
   };
 
-  const filteredCities = INDIAN_CITIES.filter(city =>
-    city.toLowerCase().includes(locationSearch.toLowerCase())
-  );
-
-  const filteredFilterCities = INDIAN_CITIES.filter(city =>
-    city.toLowerCase().includes(filterLocationSearch.toLowerCase())
-  );
+  const resetLocationSelection = () => {
+    setContinent('');
+    setCountry('');
+    setCity('');
+  };
 
   const handleSignup = (e) => {
     e.preventDefault();
@@ -150,7 +270,9 @@ export default function App() {
       profilePhoto: profilePhoto || "😊",
       profileImage: profileImage || null,
       interests: interests,
-      location: location,
+      continent, country, city,
+      location: getFullLocation(),
+      sexuality: sexuality,
       matches: [], likes: [], likedBy: [], passes: [], messages: {},
       loginMethod: 'email'
     };
@@ -158,6 +280,32 @@ export default function App() {
     setCurrentUser({ email, name });
     setLoggedIn(true);
     setSignupStep(1);
+    setIsCompletingProfile(false);
+  };
+
+  const handleCompleteGoogleProfile = (e) => {
+    e.preventDefault();
+    if (!pendingGoogleUser) return;
+    
+    const newUser = {
+      ...pendingGoogleUser,
+      age: parseInt(age) || 25,
+      bio: bio || "New to Connect the Dots!",
+      vibe: vibe || "Excited to meet people",
+      profilePhoto: profilePhoto || "😊",
+      profileImage: profileImage || pendingGoogleUser.profileImage,
+      interests: interests,
+      continent, country, city,
+      location: getFullLocation(),
+      sexuality: sexuality,
+      matches: [], likes: [], likedBy: [], passes: [], messages: {},
+    };
+    setAllUsers({ ...allUsers, [pendingGoogleUser.email]: newUser });
+    setCurrentUser({ email: pendingGoogleUser.email, name: newUser.name });
+    setLoggedIn(true);
+    setSignupStep(1);
+    setIsCompletingProfile(false);
+    setPendingGoogleUser(null);
   };
 
   const handleLogin = (e) => {
@@ -194,23 +342,21 @@ export default function App() {
               setCurrentUser({ email: googleEmail, name: allUsers[googleEmail].name });
               setLoggedIn(true);
             } else {
-              const newUser = {
+              setName(googleName);
+              setEmail(googleEmail);
+              setProfileImage(googlePicture);
+              setProfilePhoto(googlePicture ? '🖼️' : "😊");
+              
+              setPendingGoogleUser({
                 email: googleEmail,
-                password: 'google_oauth_' + Date.now(),
                 name: googleName,
-                age: 25,
-                bio: "New to Connect the Dots!",
-                vibe: "Excited to meet people",
+                profileImage: googlePicture,
                 profilePhoto: googlePicture ? '🖼️' : "😊",
-                profileImage: googlePicture || null,
-                interests: [],
-                location: '',
-                matches: [], likes: [], likedBy: [], passes: [], messages: {},
                 loginMethod: 'google'
-              };
-              setAllUsers({ ...allUsers, [googleEmail]: newUser });
-              setCurrentUser({ email: googleEmail, name: googleName });
-              setLoggedIn(true);
+              });
+              setIsCompletingProfile(true);
+              setShowSignup(true);
+              setSignupStep(1);
             }
           });
         }
@@ -225,6 +371,7 @@ export default function App() {
     setActiveChat(null);
     setShowSettings(false);
     setShowFilters(false);
+    if (activeCall) endCall();
   };
 
   const updateMyData = (updates) => {
@@ -241,7 +388,8 @@ export default function App() {
     if (theyLikedMe) {
       newMatches.push({
         email: likedUserEmail, name: likedUser.name, age: likedUser.age,
-        vibe: likedUser.vibe, profilePhoto: likedUser.profilePhoto, profileImage: likedUser.profileImage
+        vibe: likedUser.vibe, profilePhoto: likedUser.profilePhoto, profileImage: likedUser.profileImage,
+        location: likedUser.location
       });
     }
     updateMyData({ likes: newLikes, matches: newMatches });
@@ -262,6 +410,26 @@ export default function App() {
     const newMessages = { ...(userData?.messages || {}), [matchEmail]: [...currentMessages, { from: "me", text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] };
     updateMyData({ messages: newMessages });
     setInputText('');
+  };
+
+  // WebRTC Video/Audio Call functions
+  const startCall = async (targetUser, isVideo = true) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+      setActiveCall({ targetUser, isVideo, stream });
+    } catch (err) {
+      alert('Could not access camera/microphone');
+    }
+  };
+
+  const endCall = () => {
+    if (activeCall?.stream) {
+      activeCall.stream.getTracks().forEach(track => track.stop());
+    }
+    setActiveCall(null);
   };
 
   const deleteAccount = () => {
@@ -324,9 +492,12 @@ export default function App() {
   };
 
   const clearFilters = () => {
-    setFilterLocation('');
+    setFilterContinent('');
+    setFilterCountry('');
+    setFilterCity('');
     setFilterMinAge(18);
     setFilterMaxAge(35);
+    setFilterSexuality('');
   };
 
   const Logo = () => (
@@ -351,6 +522,22 @@ export default function App() {
     </div>
   );
 
+  // Video Call Screen
+  if (activeCall) {
+    return (
+      <div style={styles.callContainer}>
+        <div style={styles.callHeader}>
+          <h3 style={styles.callTitle}>Calling {activeCall.targetUser?.name}...</h3>
+          <button onClick={endCall} style={styles.endCallBtn}>End Call</button>
+        </div>
+        <div style={styles.videoGrid}>
+          <video ref={remoteVideoRef} autoPlay playsInline style={styles.remoteVideo} />
+          <video ref={localVideoRef} autoPlay playsInline muted style={styles.localVideo} />
+        </div>
+      </div>
+    );
+  }
+
   // Chat Screen
   if (activeChat) {
     const match = activeChat;
@@ -371,6 +558,10 @@ export default function App() {
                 <div style={styles.chatVibe}>{match.vibe}</div>
                 {match.location && <div style={styles.chatLocation}>📍 {match.location}</div>}
               </div>
+            </div>
+            <div style={styles.callButtons}>
+              <button onClick={() => startCall(match, true)} style={styles.videoCallBtn}>📹</button>
+              <button onClick={() => startCall(match, false)} style={styles.audioCallBtn}>📞</button>
             </div>
           </div>
           <div style={styles.chatMessages}>
@@ -398,14 +589,169 @@ export default function App() {
     );
   }
 
-  // Login Screen
+  // Profile Completion Screen (for Google users)
+  if (isCompletingProfile && pendingGoogleUser) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.glassCard}>
+          <Logo />
+          <h1 style={styles.title}>Complete Your Profile</h1>
+          <p style={styles.subtitle}>Welcome {pendingGoogleUser.name}! Just a few more details...</p>
+          
+          <div style={styles.progressBar}>
+            <div style={{...styles.progressFill, width: `${(signupStep / 4) * 100}%`}} />
+          </div>
+          <div style={styles.stepIndicators}>
+            <div style={{...styles.stepDot, background: signupStep >= 1 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>1</div>
+            <div style={styles.stepLine} />
+            <div style={{...styles.stepDot, background: signupStep >= 2 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>2</div>
+            <div style={styles.stepLine} />
+            <div style={{...styles.stepDot, background: signupStep >= 3 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>3</div>
+            <div style={styles.stepLine} />
+            <div style={{...styles.stepDot, background: signupStep >= 4 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>4</div>
+          </div>
+          
+          <form onSubmit={handleCompleteGoogleProfile}>
+            {signupStep === 1 && (
+              <div style={styles.stepContainer}>
+                <h3 style={styles.stepTitle}>Basic Info ✨</h3>
+                <input style={styles.input} placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} required />
+                <input style={styles.input} placeholder="Your age" type="number" value={age} onChange={(e) => setAge(e.target.value)} required />
+                <div style={styles.imageUploadArea}>
+                  <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} style={styles.imageUploadBtn}>{profileImage ? '📷 Change photo' : '📷 Add a profile photo'}</button>
+                  {profileImage && <div style={styles.imagePreview}><img src={profileImage} alt="Preview" style={styles.imagePreviewImg} /></div>}
+                </div>
+                <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
+              </div>
+            )}
+            
+            {signupStep === 2 && (
+              <div style={styles.stepContainer}>
+                <h3 style={styles.stepTitle}>About You 💫</h3>
+                <input style={styles.input} placeholder="Your vibe (e.g., Foodie, Traveler, Artist)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
+                <textarea style={{...styles.input, minHeight: 80}} placeholder="Write a short bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
+                <div style={styles.buttonGroup}>
+                  <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                  <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
+                </div>
+              </div>
+            )}
+            
+            {signupStep === 3 && (
+              <div style={styles.stepContainer}>
+                <h3 style={styles.stepTitle}>Where are you? 🌍</h3>
+                <p style={styles.locationHelp}>Select your location: Continent → Country → City</p>
+                
+                {/* Continent Selection */}
+                <div style={styles.locationDropdownContainer}>
+                  <button type="button" onClick={() => setShowContinentDropdown(!showContinentDropdown)} style={styles.locationButton}>
+                    {continent || '🌍 Select Continent'}
+                    <span style={styles.dropdownArrow}>▼</span>
+                  </button>
+                  {showContinentDropdown && (
+                    <div style={styles.locationDropdown}>
+                      {Object.keys(WORLD_DATA).map(cont => (
+                        <div key={cont} onClick={() => { setContinent(cont); setCountry(''); setCity(''); setShowContinentDropdown(false); }} style={styles.locationOption}>
+                          {cont}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Country Selection (only if continent selected) */}
+                {continent && (
+                  <div style={styles.locationDropdownContainer}>
+                    <button type="button" onClick={() => setShowCountryDropdown(!showCountryDropdown)} style={styles.locationButton}>
+                      {country || '🌍 Select Country'}
+                      <span style={styles.dropdownArrow}>▼</span>
+                    </button>
+                    {showCountryDropdown && (
+                      <div style={styles.locationDropdown}>
+                        {getAvailableCountries().map(c => (
+                          <div key={c} onClick={() => { setCountry(c); setCity(''); setShowCountryDropdown(false); }} style={styles.locationOption}>
+                            {c}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* City Selection (only if country selected) */}
+                {country && (
+                  <div style={styles.locationDropdownContainer}>
+                    <button type="button" onClick={() => setShowCityDropdown(!showCityDropdown)} style={styles.locationButton}>
+                      {city || '🌍 Select City'}
+                      <span style={styles.dropdownArrow}>▼</span>
+                    </button>
+                    {showCityDropdown && (
+                      <div style={styles.locationDropdown}>
+                        {getAvailableCities().map(c => (
+                          <div key={c} onClick={() => { setCity(c); setShowCityDropdown(false); }} style={styles.locationOption}>
+                            {c}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Show selected location summary */}
+                {continent && country && city && (
+                  <div style={styles.selectedLocation}>
+                    📍 Selected: {continent} · {country} · {city}
+                    <button type="button" onClick={resetLocationSelection} style={styles.resetLocationBtn}>Change</button>
+                  </div>
+                )}
+                
+                <div style={styles.buttonGroup}>
+                  <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                  <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
+                </div>
+              </div>
+            )}
+            
+            {signupStep === 4 && (
+              <div style={styles.stepContainer}>
+                <h3 style={styles.stepTitle}>How do you identify? 🏳️‍🌈</h3>
+                <div style={styles.locationDropdownContainer}>
+                  <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>
+                    {sexuality || '🏳️‍🌈 Select your identity'}
+                    <span style={styles.dropdownArrow}>▼</span>
+                  </button>
+                  {showSexualityDropdown && (
+                    <div style={styles.locationDropdown}>
+                      {LGBTQ_OPTIONS.map(opt => (
+                        <div key={opt} onClick={() => { setSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div style={styles.buttonGroup}>
+                  <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                  <button type="submit" style={styles.button}>Finish & Start →</button>
+                </div>
+              </div>
+            )}
+          </form>
+          <p style={styles.switchText}>Already have an account? <button onClick={() => { setShowSignup(false); setIsCompletingProfile(false); }} style={styles.linkButton}>Login</button></p>
+        </div>
+      </div>
+    );
+  }
+
+  // Login/Signup Screen
   if (!loggedIn) {
     return (
       <div style={styles.container}>
         <div style={styles.glassCard}>
           <Logo />
           <h1 style={styles.title}>Connect the Dots</h1>
-          <p style={styles.subtitle}>Indian Dating · Real Connections</p>
+          <p style={styles.subtitle}>Find your perfect match anywhere in the world</p>
           
           {!showSignup ? (
             <>
@@ -433,98 +779,139 @@ export default function App() {
                 <div style={{...styles.stepDot, background: signupStep >= 4 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>4</div>
               </div>
               
-              {signupStep === 1 && (
-                <div style={styles.stepContainer}>
-                  <h3 style={styles.stepTitle}>Let's start with the basics ✨</h3>
-                  <input style={styles.input} placeholder="What's your name?" value={name} onChange={(e) => setName(e.target.value)} />
-                  <input style={styles.input} placeholder="Your age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
-                  <div style={styles.imageUploadArea}>
-                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} style={styles.imageUploadBtn}>{profileImage ? '📷 Great photo! ✓' : '📷 Add a profile photo'}</button>
-                    {profileImage && <div style={styles.imagePreview}><img src={profileImage} alt="Preview" style={styles.imagePreviewImg} /></div>}
+              <form onSubmit={handleSignup}>
+                {signupStep === 1 && (
+                  <div style={styles.stepContainer}>
+                    <h3 style={styles.stepTitle}>Basic Info ✨</h3>
+                    <input style={styles.input} placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} required />
+                    <input style={styles.input} placeholder="Your age" type="number" value={age} onChange={(e) => setAge(e.target.value)} required />
+                    <div style={styles.imageUploadArea}>
+                      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
+                      <button type="button" onClick={() => fileInputRef.current?.click()} style={styles.imageUploadBtn}>{profileImage ? '📷 Great photo! ✓' : '📷 Add a profile photo'}</button>
+                      {profileImage && <div style={styles.imagePreview}><img src={profileImage} alt="Preview" style={styles.imagePreviewImg} /></div>}
+                    </div>
+                    <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
                   </div>
-                  <button onClick={handleNextStep} style={styles.button}>Next →</button>
-                </div>
-              )}
-              
-              {signupStep === 2 && (
-                <div style={styles.stepContainer}>
-                  <h3 style={styles.stepTitle}>Tell us about yourself 💫</h3>
-                  <input style={styles.input} placeholder="Your vibe (e.g., Foodie, Traveler, Artist)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
-                  <textarea style={{...styles.input, minHeight: 80}} placeholder="Write a short bio... what makes you unique?" value={bio} onChange={(e) => setBio(e.target.value)} />
-                  <div style={styles.buttonGroup}>
-                    <button onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                    <button onClick={handleNextStep} style={styles.button}>Next →</button>
+                )}
+                
+                {signupStep === 2 && (
+                  <div style={styles.stepContainer}>
+                    <h3 style={styles.stepTitle}>About You 💫</h3>
+                    <input style={styles.input} placeholder="Your vibe (e.g., Foodie, Traveler, Artist)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
+                    <textarea style={{...styles.input, minHeight: 80}} placeholder="Write a short bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
+                    <h3 style={{...styles.stepTitle, fontSize: 14, marginTop: 16}}>What do you love? ❤️</h3>
+                    <div style={styles.interestsGrid}>
+                      {interestOptions.map(interest => (
+                        <button key={interest} type="button" onClick={() => toggleInterest(interest)} style={{...styles.interestBtn, background: interests.includes(interest) ? '#FF4D6D' : 'rgba(255,255,255,0.1)', border: interests.includes(interest) ? 'none' : '1px solid rgba(255,255,255,0.2)'}}>
+                          {interest}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={styles.buttonGroup}>
+                      <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                      <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
+                    </div>
                   </div>
-                </div>
-              )}
-              
-              {signupStep === 3 && (
-                <div style={styles.stepContainer}>
-                  <h3 style={styles.stepTitle}>What do you love? ❤️</h3>
-                  <div style={styles.interestsGrid}>
-                    {interestOptions.map(interest => (
-                      <button key={interest} onClick={() => toggleInterest(interest)} style={{...styles.interestBtn, background: interests.includes(interest) ? '#FF4D6D' : 'rgba(255,255,255,0.1)', border: interests.includes(interest) ? 'none' : '1px solid rgba(255,255,255,0.2)'}}>
-                        {interest}
+                )}
+                
+                {signupStep === 3 && (
+                  <div style={styles.stepContainer}>
+                    <h3 style={styles.stepTitle}>Where are you? 🌍</h3>
+                    <p style={styles.locationHelp}>Select your location: Continent → Country → City</p>
+                    
+                    <div style={styles.locationDropdownContainer}>
+                      <button type="button" onClick={() => setShowContinentDropdown(!showContinentDropdown)} style={styles.locationButton}>
+                        {continent || '🌍 Select Continent'}
+                        <span style={styles.dropdownArrow}>▼</span>
                       </button>
-                    ))}
-                  </div>
-                  <div style={styles.buttonGroup}>
-                    <button onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                    <button onClick={handleNextStep} style={styles.button}>Next →</button>
-                  </div>
-                </div>
-              )}
-              
-              {signupStep === 4 && (
-                <div style={styles.stepContainer}>
-                  <h3 style={styles.stepTitle}>Where are you located? 📍</h3>
-                  <div style={styles.locationDropdownContainer}>
-                    <button
-                      type="button"
-                      onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                      style={styles.locationButton}
-                    >
-                      {location || 'Select your city'}
-                      <span style={styles.dropdownArrow}>▼</span>
-                    </button>
-                    {showLocationDropdown && (
-                      <div style={styles.locationDropdown}>
-                        <input
-                          type="text"
-                          placeholder="Search cities..."
-                          value={locationSearch}
-                          onChange={(e) => setLocationSearch(e.target.value)}
-                          style={styles.locationSearch}
-                          autoFocus
-                        />
-                        <div style={styles.locationList}>
-                          {filteredCities.map(city => (
-                            <div
-                              key={city}
-                              onClick={() => {
-                                setLocation(city);
-                                setShowLocationDropdown(false);
-                                setLocationSearch('');
-                              }}
-                              style={styles.locationOption}
-                            >
-                              📍 {city}
+                      {showContinentDropdown && (
+                        <div style={styles.locationDropdown}>
+                          {Object.keys(WORLD_DATA).map(cont => (
+                            <div key={cont} onClick={() => { setContinent(cont); setCountry(''); setCity(''); setShowContinentDropdown(false); }} style={styles.locationOption}>
+                              {cont}
                             </div>
                           ))}
                         </div>
+                      )}
+                    </div>
+                    
+                    {continent && (
+                      <div style={styles.locationDropdownContainer}>
+                        <button type="button" onClick={() => setShowCountryDropdown(!showCountryDropdown)} style={styles.locationButton}>
+                          {country || '🌍 Select Country'}
+                          <span style={styles.dropdownArrow}>▼</span>
+                        </button>
+                        {showCountryDropdown && (
+                          <div style={styles.locationDropdown}>
+                            {getAvailableCountries().map(c => (
+                              <div key={c} onClick={() => { setCountry(c); setCity(''); setShowCountryDropdown(false); }} style={styles.locationOption}>
+                                {c}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
+                    
+                    {country && (
+                      <div style={styles.locationDropdownContainer}>
+                        <button type="button" onClick={() => setShowCityDropdown(!showCityDropdown)} style={styles.locationButton}>
+                          {city || '🌍 Select City'}
+                          <span style={styles.dropdownArrow}>▼</span>
+                        </button>
+                        {showCityDropdown && (
+                          <div style={styles.locationDropdown}>
+                            {getAvailableCities().map(c => (
+                              <div key={c} onClick={() => { setCity(c); setShowCityDropdown(false); }} style={styles.locationOption}>
+                                {c}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {continent && country && city && (
+                      <div style={styles.selectedLocation}>
+                        📍 Selected: {continent} · {country} · {city}
+                        <button type="button" onClick={resetLocationSelection} style={styles.resetLocationBtn}>Change</button>
+                      </div>
+                    )}
+                    
+                    <div style={styles.buttonGroup}>
+                      <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                      <button type="button" onClick={handleNextStep} style={styles.button}>Next →</button>
+                    </div>
                   </div>
-                  <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  <div style={styles.buttonGroup}>
-                    <button onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
-                    <button onClick={handleSignup} style={styles.button}>Finish & Start →</button>
+                )}
+                
+                {signupStep === 4 && (
+                  <div style={styles.stepContainer}>
+                    <h3 style={styles.stepTitle}>How do you identify? 🏳️‍🌈</h3>
+                    <div style={styles.locationDropdownContainer}>
+                      <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>
+                        {sexuality || '🏳️‍🌈 Select your identity'}
+                        <span style={styles.dropdownArrow}>▼</span>
+                      </button>
+                      {showSexualityDropdown && (
+                        <div style={styles.locationDropdown}>
+                          {LGBTQ_OPTIONS.map(opt => (
+                            <div key={opt} onClick={() => { setSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>
+                              {opt}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <div style={styles.buttonGroup}>
+                      <button type="button" onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                      <button type="submit" style={styles.button}>Finish & Start →</button>
+                    </div>
                   </div>
-                </div>
-              )}
-              
+                )}
+              </form>
               <p style={styles.switchText}>Already have an account? <button onClick={() => setShowSignup(false)} style={styles.linkButton}>Login</button></p>
             </>
           )}
@@ -564,7 +951,7 @@ export default function App() {
   // Main App
   const currentProfile = filteredOtherUsers[0];
   const hasNewLikes = likedBy.length > 0 && !likedBy.some(email => myLikes.includes(email));
-  const activeFilterCount = (filterLocation ? 1 : 0) + (filterMinAge !== 18 ? 1 : 0) + (filterMaxAge !== 35 ? 1 : 0);
+  const activeFilterCount = (filterContinent ? 1 : 0) + (filterCountry ? 1 : 0) + (filterCity ? 1 : 0) + (filterMinAge !== 18 ? 1 : 0) + (filterMaxAge !== 35 ? 1 : 0) + (filterSexuality ? 1 : 0);
 
   return (
     <>
@@ -582,6 +969,7 @@ export default function App() {
           </div>
           <div style={styles.userLocation}>
             {userData?.location && <span>📍 {userData.location}</span>}
+            {userData?.sexuality && <span style={styles.userSexuality}> · {userData.sexuality}</span>}
           </div>
           <div style={styles.tabs}>
             <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>🔍 Swipe</button>
@@ -614,6 +1002,7 @@ export default function App() {
                   <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
                   <p style={styles.swipeVibe}>{currentProfile.vibe}</p>
                   {currentProfile.location && <p style={styles.swipeLocation}>📍 {currentProfile.location}</p>}
+                  {currentProfile.sexuality && <p style={styles.swipeSexuality}>{currentProfile.sexuality}</p>}
                   <p style={styles.swipeBio}>"{currentProfile.bio}"</p>
                   {currentProfile.interests && currentProfile.interests.length > 0 && (
                     <div style={styles.interestsPreview}>
@@ -635,10 +1024,13 @@ export default function App() {
               </div>
               {activeFilterCount > 0 && (
                 <div style={styles.activeFilters}>
-                  {filterLocation && <span style={styles.filterTag}>📍 {filterLocation}</span>}
+                  {filterContinent && <span style={styles.filterTag}>🌍 {filterContinent}</span>}
+                  {filterCountry && <span style={styles.filterTag}>📍 {filterCountry}</span>}
+                  {filterCity && <span style={styles.filterTag}>🏙️ {filterCity}</span>}
                   {(filterMinAge !== 18 || filterMaxAge !== 35) && (
                     <span style={styles.filterTag}>🎂 {filterMinAge}-{filterMaxAge}</span>
                   )}
+                  {filterSexuality && <span style={styles.filterTag}>🏳️‍🌈 {filterSexuality}</span>}
                   <button onClick={clearFilters} style={styles.clearFiltersBtn}>Clear all ✕</button>
                 </div>
               )}
@@ -711,51 +1103,22 @@ export default function App() {
             </div>
             <div style={styles.settingsContent}>
               <div style={styles.settingsSection}>
-                <h3 style={styles.settingsSectionTitle}>📍 Location</h3>
+                <h3 style={styles.settingsSectionTitle}>🌍 Location</h3>
                 <div style={styles.locationDropdownContainer}>
-                  <button
-                    type="button"
-                    onClick={() => setFilterShowLocationDropdown(!filterShowLocationDropdown)}
-                    style={styles.locationButton}
-                  >
-                    {filterLocation || 'Any city'}
+                  <button type="button" onClick={() => setFilterShowLocationDropdown(!filterShowLocationDropdown)} style={styles.locationButton}>
+                    {filterContinent || 'Any Continent'}
                     <span style={styles.dropdownArrow}>▼</span>
                   </button>
                   {filterShowLocationDropdown && (
                     <div style={styles.locationDropdown}>
-                      <input
-                        type="text"
-                        placeholder="Search cities..."
-                        value={filterLocationSearch}
-                        onChange={(e) => setFilterLocationSearch(e.target.value)}
-                        style={styles.locationSearch}
-                        autoFocus
-                      />
-                      <div style={styles.locationList}>
-                        <div
-                          onClick={() => {
-                            setFilterLocation('');
-                            setFilterShowLocationDropdown(false);
-                            setFilterLocationSearch('');
-                          }}
-                          style={styles.locationOption}
-                        >
-                          🌍 Any city
-                        </div>
-                        {filteredFilterCities.map(city => (
-                          <div
-                            key={city}
-                            onClick={() => {
-                              setFilterLocation(city);
-                              setFilterShowLocationDropdown(false);
-                              setFilterLocationSearch('');
-                            }}
-                            style={styles.locationOption}
-                          >
-                            📍 {city}
-                          </div>
-                        ))}
+                      <div onClick={() => { setFilterContinent(''); setFilterCountry(''); setFilterCity(''); setFilterShowLocationDropdown(false); }} style={styles.locationOption}>
+                        🌍 Anywhere
                       </div>
+                      {Object.keys(WORLD_DATA).map(cont => (
+                        <div key={cont} onClick={() => { setFilterContinent(cont); setFilterCountry(''); setFilterCity(''); setFilterShowLocationDropdown(false); }} style={styles.locationOption}>
+                          {cont}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -763,29 +1126,34 @@ export default function App() {
               <div style={styles.settingsSection}>
                 <h3 style={styles.settingsSectionTitle}>🎂 Age Range</h3>
                 <div style={styles.ageRangeContainer}>
-                  <input
-                    type="range"
-                    min={18}
-                    max={50}
-                    value={filterMinAge}
-                    onChange={(e) => setFilterMinAge(parseInt(e.target.value))}
-                    style={styles.rangeInput}
-                  />
                   <div style={styles.ageRangeValues}>
                     <span>{filterMinAge}</span>
                     <span>-</span>
                     <span>{filterMaxAge}</span>
                   </div>
-                  <div style={styles.ageRangeSliders}>
-                    <input
-                      type="range"
-                      min={18}
-                      max={50}
-                      value={filterMaxAge}
-                      onChange={(e) => setFilterMaxAge(parseInt(e.target.value))}
-                      style={styles.rangeInput}
-                    />
-                  </div>
+                  <input type="range" min={18} max={50} value={filterMinAge} onChange={(e) => setFilterMinAge(parseInt(e.target.value))} style={styles.rangeInput} />
+                  <input type="range" min={18} max={50} value={filterMaxAge} onChange={(e) => setFilterMaxAge(parseInt(e.target.value))} style={styles.rangeInput} />
+                </div>
+              </div>
+              <div style={styles.settingsSection}>
+                <h3 style={styles.settingsSectionTitle}>🏳️‍🌈 Sexuality</h3>
+                <div style={styles.locationDropdownContainer}>
+                  <button type="button" onClick={() => setShowSexualityDropdown(!showSexualityDropdown)} style={styles.locationButton}>
+                    {filterSexuality || 'Any identity'}
+                    <span style={styles.dropdownArrow}>▼</span>
+                  </button>
+                  {showSexualityDropdown && (
+                    <div style={styles.locationDropdown}>
+                      <div onClick={() => { setFilterSexuality(''); setShowSexualityDropdown(false); }} style={styles.locationOption}>
+                        🏳️‍🌈 Any identity
+                      </div>
+                      {LGBTQ_OPTIONS.map(opt => (
+                        <div key={opt} onClick={() => { setFilterSexuality(opt); setShowSexualityDropdown(false); }} style={styles.locationOption}>
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div style={styles.buttonGroup}>
@@ -808,28 +1176,15 @@ export default function App() {
             <div style={styles.settingsContent}>
               <div style={styles.settingsSection}>
                 <h3 style={styles.settingsSectionTitle}>Account</h3>
-                <div style={styles.settingsItem}>
-                  <span>📧 Email</span>
-                  <span style={styles.settingsValue}>{currentUser?.email}</span>
-                </div>
-                <div style={styles.settingsItem}>
-                  <span>👤 Name</span>
-                  <span style={styles.settingsValue}>{userData?.name}</span>
-                </div>
-                <div style={styles.settingsItem}>
-                  <span>🎂 Age</span>
-                  <span style={styles.settingsValue}>{userData?.age}</span>
-                </div>
-                <div style={styles.settingsItem}>
-                  <span>📍 Location</span>
-                  <span style={styles.settingsValue}>{userData?.location || 'Not set'}</span>
-                </div>
+                <div style={styles.settingsItem}><span>📧 Email</span><span style={styles.settingsValue}>{currentUser?.email}</span></div>
+                <div style={styles.settingsItem}><span>👤 Name</span><span style={styles.settingsValue}>{userData?.name}</span></div>
+                <div style={styles.settingsItem}><span>🎂 Age</span><span style={styles.settingsValue}>{userData?.age}</span></div>
+                <div style={styles.settingsItem}><span>📍 Location</span><span style={styles.settingsValue}>{userData?.location || 'Not set'}</span></div>
+                <div style={styles.settingsItem}><span>🏳️‍🌈 Identity</span><span style={styles.settingsValue}>{userData?.sexuality || 'Not set'}</span></div>
               </div>
               <div style={styles.settingsSection}>
                 <h3 style={styles.settingsSectionTitle}>Danger Zone</h3>
-                <button onClick={deleteAccount} style={styles.dangerSettingsBtn}>
-                  🗑️ Delete Account Permanently
-                </button>
+                <button onClick={deleteAccount} style={styles.dangerSettingsBtn}>🗑️ Delete Account Permanently</button>
                 <p style={styles.dangerText}>This action cannot be undone. All your data will be lost.</p>
               </div>
             </div>
@@ -845,6 +1200,23 @@ const styles = {
   glassCard: { background: 'rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(24px)', borderRadius: 48, padding: 40, width: '100%', maxWidth: 400, textAlign: 'center', boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5)' },
   appCard: { background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(24px)', borderRadius: 48, padding: 24, width: '100%', maxWidth: 450, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5)' },
   chatCard: { background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(24px)', borderRadius: 48, width: '100%', maxWidth: 450, height: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  callContainer: { minHeight: '100vh', background: '#000', display: 'flex', flexDirection: 'column' },
+  callHeader: { padding: 20, background: '#111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  callTitle: { color: 'white', margin: 0 },
+  endCallBtn: { background: '#FF4D6D', border: 'none', padding: '10px 20px', borderRadius: 30, color: 'white', cursor: 'pointer' },
+  videoGrid: { flex: 1, display: 'flex', flexWrap: 'wrap', position: 'relative' },
+  remoteVideo: { flex: 1, width: '100%const styles = {
+  container: { minHeight: '100vh', background: 'radial-gradient(circle at 20% 50%, #1a1a2e, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont', padding: 20 },
+  glassCard: { background: 'rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(24px)', borderRadius: 48, padding: 40, width: '100%', maxWidth: 400, textAlign: 'center', boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5)' },
+  appCard: { background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(24px)', borderRadius: 48, padding: 24, width: '100%', maxWidth: 450, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5)' },
+  chatCard: { background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(24px)', borderRadius: 48, width: '100%', maxWidth: 450, height: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  callContainer: { minHeight: '100vh', background: '#000', display: 'flex', flexDirection: 'column' },
+  callHeader: { padding: 20, background: '#111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  callTitle: { color: 'white', margin: 0 },
+  endCallBtn: { background: '#FF4D6D', border: 'none', padding: '10px 20px', borderRadius: 30, color: 'white', cursor: 'pointer' },
+  videoGrid: { flex: 1, display: 'flex', flexWrap: 'wrap', position: 'relative' },
+  remoteVideo: { flex: 1, width: '100%', height: '100%', objectFit: 'cover' },
+  localVideo: { position: 'absolute', bottom: 20, right: 20, width: 120, height: 160, borderRadius: 12, objectFit: 'cover', border: '2px solid white' },
   logoContainer: { marginBottom: 16, cursor: 'pointer' },
   logoImage: { width: 80, height: 80, objectFit: 'contain', borderRadius: 20, margin: '0 auto' },
   logoFallback: { fontSize: 64 },
@@ -868,6 +1240,7 @@ const styles = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   headerRight: { display: 'flex', gap: 8 },
   userLocation: { textAlign: 'center', marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.4)' },
+  userSexuality: { marginLeft: 5 },
   settingsBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', color: 'white', fontSize: 16, position: 'relative' },
   filterBadge: { position: 'absolute', top: -2, right: -2, background: '#FF4D6D', borderRadius: 10, padding: '2px 5px', fontSize: 10, fontWeight: 'bold' },
   logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12 },
@@ -880,7 +1253,8 @@ const styles = {
   profilePhotoImg: { width: 120, height: 120, borderRadius: 60, objectFit: 'cover', margin: '0 auto', border: '3px solid rgba(255,255,255,0.2)' },
   swipeName: { fontSize: 28, fontWeight: '700', marginBottom: 4, color: 'white' },
   swipeVibe: { color: '#FF4D6D', fontWeight: '600', fontSize: 14, marginBottom: 8 },
-  swipeLocation: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 8 },
+  swipeLocation: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 4 },
+  swipeSexuality: { color: 'rgba(255,255,255,0.4)', fontSize: 11, marginBottom: 8 },
   swipeBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic' },
   interestsPreview: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 },
   interestTag: { background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: 20, fontSize: 11, color: 'rgba(255,255,255,0.7)' },
@@ -906,7 +1280,7 @@ const styles = {
   matchLocation: { fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 },
   chatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer' },
   likeBackBtn: { background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer' },
-  chatHeader: { padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 16 },
+  chatHeader: { padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
   backButton: { background: 'rgba(255,255,255,0.1)', border: 'none', fontSize: 24, cursor: 'pointer', color: 'white', width: 40, height: 40, borderRadius: 30 },
   chatUser: { display: 'flex', alignItems: 'center', gap: 12, flex: 1 },
   chatEmoji: { fontSize: 44 },
@@ -914,6 +1288,9 @@ const styles = {
   chatName: { fontWeight: 'bold', fontSize: 16, color: 'white' },
   chatVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
   chatLocation: { fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 },
+  callButtons: { display: 'flex', gap: 8 },
+  videoCallBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', fontSize: 16 },
+  audioCallBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', fontSize: 16 },
   chatMessages: { flex: 1, overflowY: 'auto', padding: 16 },
   icebreaker: { textAlign: 'center', padding: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 32, marginBottom: 16 },
   icebreakerText: { marginBottom: 12, color: 'rgba(255,255,255,0.7)', fontSize: 13 },
@@ -935,19 +1312,21 @@ const styles = {
   stepLine: { width: 30, height: 1, background: 'rgba(255,255,255,0.2)' },
   stepContainer: { animation: 'fadeIn 0.3s' },
   stepTitle: { color: 'white', fontSize: 18, marginBottom: 20, textAlign: 'center' },
+  locationHelp: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16, textAlign: 'center' },
   interestsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 },
   interestBtn: { padding: '8px 12px', borderRadius: 50, fontSize: 12, cursor: 'pointer', color: 'white', transition: 'all 0.15s' },
   locationDropdownContainer: { position: 'relative', width: '100%', marginBottom: 12 },
   locationButton: { width: '100%', padding: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 28, color: 'white', fontSize: 14, textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   dropdownArrow: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
-  locationDropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 20, marginTop: 8, zIndex: 100, border: '1px solid rgba(255,255,255,0.1)', maxHeight: 250, overflow: 'hidden' },
+  locationDropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 20, marginTop: 8, zIndex: 100, border: '1px solid rgba(255,255,255,0.1)', maxHeight: 250, overflow: 'auto' },
   locationSearch: { width: '100%', padding: 12, background: 'rgba(255,255,255,0.05)', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' },
   locationList: { maxHeight: 200, overflowY: 'auto' },
-  locationOption: { padding: '12px 16px', cursor: 'pointer', color: 'white', fontSize: 14, transition: 'background 0.15s', ':hover': { background: 'rgba(255,255,255,0.1)' } },
+  locationOption: { padding: '12px 16px', cursor: 'pointer', color: 'white', fontSize: 14, transition: 'background 0.15s' },
+  selectedLocation: { background: 'rgba(255,77,109,0.1)', padding: '12px', borderRadius: 20, marginBottom: 16, fontSize: 13, color: '#FF4D6D', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  resetLocationBtn: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 12 },
   ageRangeContainer: { marginBottom: 16 },
   rangeInput: { width: '100%', margin: '8px 0', accentColor: '#FF4D6D' },
   ageRangeValues: { display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8, color: 'white', fontSize: 14 },
-  ageRangeSliders: { marginTop: 8 },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modalCard: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '32px 28px', textAlign: 'center', width: 300, border: '0.5px solid rgba(255,255,255,0.1)' },
   modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, marginBottom: 24 },
