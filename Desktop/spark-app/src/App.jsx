@@ -22,6 +22,12 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [ripples, setRipples] = useState([]);
   const [logoError, setLogoError] = useState(false);
+  
+  // Easter egg states
+  const [secretMode, setSecretMode] = useState(false);
+  const [secretStep, setSecretStep] = useState(0);
+  const [secretCode, setSecretCode] = useState('');
+  const [showToilet, setShowToilet] = useState(false);
 
   // Load all users from localStorage
   const [allUsers, setAllUsers] = useState(() => {
@@ -143,9 +149,7 @@ export default function App() {
       }
     });
     client.requestAccessToken();
-  };
-
-  const handleLogout = () => {
+  };  const handleLogout = () => {
     setLoggedIn(false);
     setCurrentUser(null);
     setActiveChat(null);
@@ -246,9 +250,37 @@ export default function App() {
     setTouchStart(null);
   };
 
+  // Easter egg functions
+  const handleLogoClick = () => {
+    setSecretStep(prev => prev + 1);
+    setTimeout(() => setSecretStep(0), 1000);
+    if (secretStep + 1 >= 3) {
+      setSecretMode(true);
+      setSecretStep(0);
+    }
+  };
+
+  const handleNumberPad = (num) => {
+    const newCode = secretCode + num;
+    setSecretCode(newCode);
+    if (newCode === '1234') {
+      setShowToilet(true);
+      setSecretMode(false);
+      setSecretCode('');
+    } else if (newCode.length === 4) {
+      alert('Wrong code! Try again.');
+      setSecretCode('');
+    }
+  };
+
+  const handleToiletClick = () => {
+    alert('🧻 Fuck you, Hrishi! 😂');
+    setShowToilet(false);
+  };
+
   // Logo Component
   const Logo = () => (
-    <div style={styles.logoContainer}>
+    <div style={styles.logoContainer} onClick={handleLogoClick}>
       {!logoError ? (
         <img 
           src="/logo.png" 
@@ -277,9 +309,7 @@ export default function App() {
       )}
       <span style={styles.smallLogoText}>Connect the Dots</span>
     </div>
-  );
-
-  // Chat Screen
+  );  // Chat Screen
   if (activeChat) {
     const match = activeChat;
     const msgs = userData?.messages?.[match.email] || [];
@@ -348,6 +378,32 @@ export default function App() {
           <Logo />
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Indian Dating · Real Connections</p>
+          
+          {/* Secret Mode Popup */}
+          {secretMode && (
+            <div style={styles.secretOverlay}>
+              <div style={styles.secretCard}>
+                <h3 style={styles.secretTitle}>🔐 Enter Secret Code</h3>
+                <div style={styles.secretCodeDisplay}>****</div>
+                <div style={styles.numberPad}>
+                  {[1,2,3,4,5,6,7,8,9,0].map(num => (
+                    <button key={num} onClick={() => handleNumberPad(num.toString())} style={styles.numBtn}>{num}</button>
+                  ))}
+                </div>
+                <button onClick={() => setSecretMode(false)} style={styles.secretClose}>Close</button>
+              </div>
+            </div>
+          )}
+
+          {/* Toilet Easter Egg */}
+          {showToilet && (
+            <div style={styles.secretOverlay}>
+              <div style={styles.secretCard}>
+                <div style={styles.toiletEmoji} onClick={handleToiletClick}>🚽</div>
+                <p style={styles.toiletText}>Click the toilet...</p>
+              </div>
+            </div>
+          )}
           
           <button 
             onClick={handleGoogleLogin} 
@@ -559,7 +615,7 @@ const styles = {
     overflow: 'hidden',
     boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
   },
-  logoContainer: { marginBottom: 16 },
+  logoContainer: { marginBottom: 16, cursor: 'pointer' },
   logoImage: { width: 80, height: 80, objectFit: 'contain', borderRadius: 20, margin: '0 auto' },
   logoFallback: { fontSize: 64, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
   smallLogoContainer: { display: 'flex', alignItems: 'center', gap: 8 },
@@ -671,5 +727,39 @@ const styles = {
   chatInputField: { flex: 1, padding: 14, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 40, fontSize: 14, outline: 'none', background: 'rgba(255,255,255,0.05)', color: 'white' },
   sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: '600' },
   settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center' },
-  dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600' }
+  dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600' },
+  secretOverlay: {
+    position: 'fixed',
+    top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.9)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(10px)',
+  },
+  secretCard: {
+    background: 'rgba(30,30,50,0.95)',
+    borderRadius: 48,
+    padding: 32,
+    textAlign: 'center',
+    width: 280,
+    border: '1px solid rgba(255,255,255,0.2)',
+  },
+  secretTitle: { color: 'white', marginBottom: 20, fontSize: 20 },
+  secretCodeDisplay: {
+    background: 'rgba(255,255,255,0.1)',
+    padding: 12,
+    borderRadius: 12,
+    color: '#FF4D6D',
+    fontSize: 24,
+    letterSpacing: 8,
+    marginBottom: 20,
+    fontFamily: 'monospace'
+  },
+  numberPad: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 },
+  numBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: 16, borderRadius: 40, color: 'white', fontSize: 20, fontWeight: 'bold', cursor: 'pointer' },
+  secretClose: { background: 'rgba(255,255,255,0.2)', border: 'none', padding: 10, borderRadius: 30, color: 'white', cursor: 'pointer', width: '100%' },
+  toiletEmoji: { fontSize: 80, cursor: 'pointer', marginBottom: 20 },
+  toiletText: { color: 'white', fontSize: 18 }
 };
