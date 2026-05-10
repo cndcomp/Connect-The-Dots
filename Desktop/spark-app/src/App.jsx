@@ -2,11 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
 
+// Indian cities list
+const INDIAN_CITIES = [
+  'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad',
+  'Jaipur', 'Lucknow', 'Nagpur', 'Indore', 'Bhopal', 'Surat', 'Vadodara', 'Ludhiana',
+  'Agra', 'Nashik', 'Ranchi', 'Chandigarh', 'Goa', 'Kochi', 'Vizag', 'Coimbatore',
+  'Mysore', 'Udaipur', 'Amritsar', 'Guwahati', 'Bhubaneswar', 'Trivandrum'
+];
+
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showSignup, setShowSignup] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [signupStep, setSignupStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +26,17 @@ export default function App() {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [interests, setInterests] = useState([]);
+  const [location, setLocation] = useState('');
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  
+  // Filter states
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterMinAge, setFilterMinAge] = useState(18);
+  const [filterMaxAge, setFilterMaxAge] = useState(35);
+  const [filterShowLocationDropdown, setFilterShowLocationDropdown] = useState(false);
+  const [filterLocationSearch, setFilterLocationSearch] = useState('');
+  
   const [activeChat, setActiveChat] = useState(null);
   const [inputText, setInputText] = useState('');
   const [view, setView] = useState('swipe');
@@ -32,7 +52,6 @@ export default function App() {
   
   const fileInputRef = useRef(null);
 
-  // Interest options
   const interestOptions = ['🎨 Art', '🏏 Cricket', '🍛 Food', '🎬 Movies', '🎵 Music', '✈️ Travel', '📚 Reading', '🧘 Wellness', '💻 Tech', '🎮 Gaming', '🏋️ Gym', '☕ Chai'];
 
   const [allUsers, setAllUsers] = useState(() => {
@@ -58,11 +77,20 @@ export default function App() {
   const myPasses = userData?.passes || [];
   const mutualMatches = myLikes.filter(id => likedBy.includes(id));
   
-  const otherUsers = Object.values(allUsers).filter(user => 
-    user.email !== currentUser?.email && 
-    !myPasses.includes(user.email) &&
-    !myLikes.includes(user.email)
-  );
+  // Filter other users based on location and age preferences
+  const filteredOtherUsers = Object.values(allUsers).filter(user => {
+    if (user.email === currentUser?.email) return false;
+    if (myPasses.includes(user.email)) return false;
+    if (myLikes.includes(user.email)) return false;
+    
+    // Location filter
+    if (filterLocation && user.location !== filterLocation) return false;
+    
+    // Age filter
+    if (user.age < filterMinAge || user.age > filterMaxAge) return false;
+    
+    return true;
+  });
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -90,12 +118,24 @@ export default function App() {
       alert('Tell us a bit about yourself!');
       return;
     }
+    if (signupStep === 3 && !location) {
+      alert('Please select your city!');
+      return;
+    }
     setSignupStep(signupStep + 1);
   };
 
   const handlePrevStep = () => {
     setSignupStep(signupStep - 1);
   };
+
+  const filteredCities = INDIAN_CITIES.filter(city =>
+    city.toLowerCase().includes(locationSearch.toLowerCase())
+  );
+
+  const filteredFilterCities = INDIAN_CITIES.filter(city =>
+    city.toLowerCase().includes(filterLocationSearch.toLowerCase())
+  );
 
   const handleSignup = (e) => {
     e.preventDefault();
@@ -110,6 +150,7 @@ export default function App() {
       profilePhoto: profilePhoto || "😊",
       profileImage: profileImage || null,
       interests: interests,
+      location: location,
       matches: [], likes: [], likedBy: [], passes: [], messages: {},
       loginMethod: 'email'
     };
@@ -163,6 +204,7 @@ export default function App() {
                 profilePhoto: googlePicture ? '🖼️' : "😊",
                 profileImage: googlePicture || null,
                 interests: [],
+                location: '',
                 matches: [], likes: [], likedBy: [], passes: [], messages: {},
                 loginMethod: 'google'
               };
@@ -182,6 +224,7 @@ export default function App() {
     setCurrentUser(null);
     setActiveChat(null);
     setShowSettings(false);
+    setShowFilters(false);
   };
 
   const updateMyData = (updates) => {
@@ -280,6 +323,12 @@ export default function App() {
     setSecretCode('');
   };
 
+  const clearFilters = () => {
+    setFilterLocation('');
+    setFilterMinAge(18);
+    setFilterMaxAge(35);
+  };
+
   const Logo = () => (
     <div style={styles.logoContainer} onClick={handleLogoClick}>
       {!logoError ? (
@@ -320,6 +369,7 @@ export default function App() {
               <div>
                 <div style={styles.chatName}>{match.name}, {match.age}</div>
                 <div style={styles.chatVibe}>{match.vibe}</div>
+                {match.location && <div style={styles.chatLocation}>📍 {match.location}</div>}
               </div>
             </div>
           </div>
@@ -371,7 +421,7 @@ export default function App() {
           ) : (
             <>
               <div style={styles.progressBar}>
-                <div style={{...styles.progressFill, width: `${(signupStep / 3) * 100}%`}} />
+                <div style={{...styles.progressFill, width: `${(signupStep / 4) * 100}%`}} />
               </div>
               <div style={styles.stepIndicators}>
                 <div style={{...styles.stepDot, background: signupStep >= 1 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>1</div>
@@ -379,6 +429,8 @@ export default function App() {
                 <div style={{...styles.stepDot, background: signupStep >= 2 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>2</div>
                 <div style={styles.stepLine} />
                 <div style={{...styles.stepDot, background: signupStep >= 3 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>3</div>
+                <div style={styles.stepLine} />
+                <div style={{...styles.stepDot, background: signupStep >= 4 ? '#FF4D6D' : 'rgba(255,255,255,0.2)'}}>4</div>
               </div>
               
               {signupStep === 1 && (
@@ -416,6 +468,53 @@ export default function App() {
                         {interest}
                       </button>
                     ))}
+                  </div>
+                  <div style={styles.buttonGroup}>
+                    <button onClick={handlePrevStep} style={styles.secondaryButton}>Back</button>
+                    <button onClick={handleNextStep} style={styles.button}>Next →</button>
+                  </div>
+                </div>
+              )}
+              
+              {signupStep === 4 && (
+                <div style={styles.stepContainer}>
+                  <h3 style={styles.stepTitle}>Where are you located? 📍</h3>
+                  <div style={styles.locationDropdownContainer}>
+                    <button
+                      type="button"
+                      onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                      style={styles.locationButton}
+                    >
+                      {location || 'Select your city'}
+                      <span style={styles.dropdownArrow}>▼</span>
+                    </button>
+                    {showLocationDropdown && (
+                      <div style={styles.locationDropdown}>
+                        <input
+                          type="text"
+                          placeholder="Search cities..."
+                          value={locationSearch}
+                          onChange={(e) => setLocationSearch(e.target.value)}
+                          style={styles.locationSearch}
+                          autoFocus
+                        />
+                        <div style={styles.locationList}>
+                          {filteredCities.map(city => (
+                            <div
+                              key={city}
+                              onClick={() => {
+                                setLocation(city);
+                                setShowLocationDropdown(false);
+                                setLocationSearch('');
+                              }}
+                              style={styles.locationOption}
+                            >
+                              📍 {city}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
@@ -463,8 +562,9 @@ export default function App() {
   }
 
   // Main App
-  const currentProfile = otherUsers[0];
+  const currentProfile = filteredOtherUsers[0];
   const hasNewLikes = likedBy.length > 0 && !likedBy.some(email => myLikes.includes(email));
+  const activeFilterCount = (filterLocation ? 1 : 0) + (filterMinAge !== 18 ? 1 : 0) + (filterMaxAge !== 35 ? 1 : 0);
 
   return (
     <>
@@ -473,9 +573,15 @@ export default function App() {
           <div style={styles.header}>
             <SmallLogo />
             <div style={styles.headerRight}>
+              <button onClick={() => setShowFilters(true)} style={{...styles.settingsBtn, background: activeFilterCount > 0 ? '#FF4D6D' : 'rgba(255,255,255,0.1)'}}>
+                🎯 {activeFilterCount > 0 && <span style={styles.filterBadge}>{activeFilterCount}</span>}
+              </button>
               <button onClick={() => setShowSettings(true)} style={styles.settingsBtn}>⚙️</button>
               <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
             </div>
+          </div>
+          <div style={styles.userLocation}>
+            {userData?.location && <span>📍 {userData.location}</span>}
           </div>
           <div style={styles.tabs}>
             <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>🔍 Swipe</button>
@@ -483,11 +589,12 @@ export default function App() {
           </div>
           {view === 'swipe' && (
             <>
-              {otherUsers.length === 0 ? (
+              {filteredOtherUsers.length === 0 ? (
                 <div style={styles.emptyState}>
                   <div style={styles.emptyEmoji}>🎉</div>
                   <h3>No more profiles!</h3>
-                  <button onClick={() => setView('matches')} style={styles.resetBtn}>View Matches →</button>
+                  <p>Try changing your filters or check back later</p>
+                  <button onClick={() => setShowFilters(true)} style={styles.resetBtn}>Adjust Filters →</button>
                 </div>
               ) : (
                 <div style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'none', transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)'}}
@@ -506,6 +613,7 @@ export default function App() {
                   </div>
                   <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
                   <p style={styles.swipeVibe}>{currentProfile.vibe}</p>
+                  {currentProfile.location && <p style={styles.swipeLocation}>📍 {currentProfile.location}</p>}
                   <p style={styles.swipeBio}>"{currentProfile.bio}"</p>
                   {currentProfile.interests && currentProfile.interests.length > 0 && (
                     <div style={styles.interestsPreview}>
@@ -514,12 +622,26 @@ export default function App() {
                       ))}
                     </div>
                   )}
+                  {isDragging && (
+                    <div style={{...styles.dragIndicator, opacity: Math.min(Math.abs(touchX) / 80, 0.8)}}>
+                      {touchX > 0 ? '♥ LIKE' : '✕ NOPE'}
+                    </div>
+                  )}
                 </div>
               )}
               <div style={styles.actionButtons}>
-                <button onClick={() => otherUsers[0] && handlePass(otherUsers[0].email)} style={styles.nopeCircle}>✕</button>
-                <button onClick={() => otherUsers[0] && handleLike(otherUsers[0].email)} style={styles.likeCircle}>♥</button>
+                <button onClick={() => currentProfile && handlePass(currentProfile.email)} style={styles.nopeCircle}>✕</button>
+                <button onClick={() => currentProfile && handleLike(currentProfile.email)} style={styles.likeCircle}>♥</button>
               </div>
+              {activeFilterCount > 0 && (
+                <div style={styles.activeFilters}>
+                  {filterLocation && <span style={styles.filterTag}>📍 {filterLocation}</span>}
+                  {(filterMinAge !== 18 || filterMaxAge !== 35) && (
+                    <span style={styles.filterTag}>🎂 {filterMinAge}-{filterMaxAge}</span>
+                  )}
+                  <button onClick={clearFilters} style={styles.clearFiltersBtn}>Clear all ✕</button>
+                </div>
+              )}
             </>
           )}
           {view === 'matches' && (
@@ -541,7 +663,11 @@ export default function App() {
                         return (
                           <div key={email} style={styles.matchItem}>
                             {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
-                            <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div></div>
+                            <div style={styles.matchInfo}>
+                              <div style={styles.matchName}>{user.name}, {user.age}</div>
+                              <div style={styles.matchVibe}>{user.vibe}</div>
+                              {user.location && <div style={styles.matchLocation}>📍 {user.location}</div>}
+                            </div>
                             <button onClick={() => handleLike(email)} style={styles.likeBackBtn}>Like Back ❤️</button>
                           </div>
                         );
@@ -557,7 +683,11 @@ export default function App() {
                         return (
                           <div key={email} style={styles.matchItem} onClick={() => setActiveChat(user)}>
                             {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.matchImage} /> : <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>}
-                            <div style={styles.matchInfo}><div style={styles.matchName}>{user.name}, {user.age}</div><div style={styles.matchVibe}>{user.vibe}</div></div>
+                            <div style={styles.matchInfo}>
+                              <div style={styles.matchName}>{user.name}, {user.age}</div>
+                              <div style={styles.matchVibe}>{user.vibe}</div>
+                              {user.location && <div style={styles.matchLocation}>📍 {user.location}</div>}
+                            </div>
                             <button style={styles.chatBtn}>💬 Chat</button>
                           </div>
                         );
@@ -570,6 +700,102 @@ export default function App() {
           )}
         </div>
       </div>
+      
+      {/* Filters Modal */}
+      {showFilters && (
+        <div style={styles.modalOverlay} onClick={() => setShowFilters(false)}>
+          <div style={styles.settingsModal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.settingsHeader}>
+              <h2 style={styles.settingsTitle}>Filter Matches</h2>
+              <button onClick={() => setShowFilters(false)} style={styles.closeSettingsBtn}>✕</button>
+            </div>
+            <div style={styles.settingsContent}>
+              <div style={styles.settingsSection}>
+                <h3 style={styles.settingsSectionTitle}>📍 Location</h3>
+                <div style={styles.locationDropdownContainer}>
+                  <button
+                    type="button"
+                    onClick={() => setFilterShowLocationDropdown(!filterShowLocationDropdown)}
+                    style={styles.locationButton}
+                  >
+                    {filterLocation || 'Any city'}
+                    <span style={styles.dropdownArrow}>▼</span>
+                  </button>
+                  {filterShowLocationDropdown && (
+                    <div style={styles.locationDropdown}>
+                      <input
+                        type="text"
+                        placeholder="Search cities..."
+                        value={filterLocationSearch}
+                        onChange={(e) => setFilterLocationSearch(e.target.value)}
+                        style={styles.locationSearch}
+                        autoFocus
+                      />
+                      <div style={styles.locationList}>
+                        <div
+                          onClick={() => {
+                            setFilterLocation('');
+                            setFilterShowLocationDropdown(false);
+                            setFilterLocationSearch('');
+                          }}
+                          style={styles.locationOption}
+                        >
+                          🌍 Any city
+                        </div>
+                        {filteredFilterCities.map(city => (
+                          <div
+                            key={city}
+                            onClick={() => {
+                              setFilterLocation(city);
+                              setFilterShowLocationDropdown(false);
+                              setFilterLocationSearch('');
+                            }}
+                            style={styles.locationOption}
+                          >
+                            📍 {city}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={styles.settingsSection}>
+                <h3 style={styles.settingsSectionTitle}>🎂 Age Range</h3>
+                <div style={styles.ageRangeContainer}>
+                  <input
+                    type="range"
+                    min={18}
+                    max={50}
+                    value={filterMinAge}
+                    onChange={(e) => setFilterMinAge(parseInt(e.target.value))}
+                    style={styles.rangeInput}
+                  />
+                  <div style={styles.ageRangeValues}>
+                    <span>{filterMinAge}</span>
+                    <span>-</span>
+                    <span>{filterMaxAge}</span>
+                  </div>
+                  <div style={styles.ageRangeSliders}>
+                    <input
+                      type="range"
+                      min={18}
+                      max={50}
+                      value={filterMaxAge}
+                      onChange={(e) => setFilterMaxAge(parseInt(e.target.value))}
+                      style={styles.rangeInput}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={styles.buttonGroup}>
+                <button onClick={clearFilters} style={styles.secondaryButton}>Reset Filters</button>
+                <button onClick={() => setShowFilters(false)} style={styles.button}>Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Settings Modal */}
       {showSettings && (
@@ -593,6 +819,10 @@ export default function App() {
                 <div style={styles.settingsItem}>
                   <span>🎂 Age</span>
                   <span style={styles.settingsValue}>{userData?.age}</span>
+                </div>
+                <div style={styles.settingsItem}>
+                  <span>📍 Location</span>
+                  <span style={styles.settingsValue}>{userData?.location || 'Not set'}</span>
                 </div>
               </div>
               <div style={styles.settingsSection}>
@@ -635,9 +865,11 @@ const styles = {
   buttonGroup: { display: 'flex', gap: 12, marginTop: 8 },
   switchText: { marginTop: 20, fontSize: 14, color: 'rgba(255,255,255,0.5)' },
   linkButton: { background: 'none', border: 'none', color: '#FF4D6D', fontWeight: '600', cursor: 'pointer' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   headerRight: { display: 'flex', gap: 8 },
-  settingsBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', color: 'white', fontSize: 16 },
+  userLocation: { textAlign: 'center', marginBottom: 12, fontSize: 12, color: 'rgba(255,255,255,0.4)' },
+  settingsBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', color: 'white', fontSize: 16, position: 'relative' },
+  filterBadge: { position: 'absolute', top: -2, right: -2, background: '#FF4D6D', borderRadius: 10, padding: '2px 5px', fontSize: 10, fontWeight: 'bold' },
   logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12 },
   tabs: { display: 'flex', gap: 10, marginBottom: 20 },
   tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, position: 'relative', transition: 'all 0.15s' },
@@ -648,12 +880,17 @@ const styles = {
   profilePhotoImg: { width: 120, height: 120, borderRadius: 60, objectFit: 'cover', margin: '0 auto', border: '3px solid rgba(255,255,255,0.2)' },
   swipeName: { fontSize: 28, fontWeight: '700', marginBottom: 4, color: 'white' },
   swipeVibe: { color: '#FF4D6D', fontWeight: '600', fontSize: 14, marginBottom: 8 },
+  swipeLocation: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 8 },
   swipeBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic' },
   interestsPreview: { display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 },
   interestTag: { background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: 20, fontSize: 11, color: 'rgba(255,255,255,0.7)' },
+  dragIndicator: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 32, fontWeight: 'bold', color: 'white', textShadow: '0 0 20px rgba(0,0,0,0.5)', pointerEvents: 'none', whiteSpace: 'nowrap' },
   actionButtons: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 },
   nopeCircle: { width: 64, height: 64, borderRadius: 32, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', fontSize: 28, color: '#FF4D6D', cursor: 'pointer', transition: 'transform 0.15s' },
   likeCircle: { width: 72, height: 72, borderRadius: 36, background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', border: 'none', fontSize: 32, color: 'white', cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,77,109,0.3)', transition: 'transform 0.15s' },
+  activeFilters: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 16 },
+  filterTag: { background: 'rgba(255,77,109,0.2)', padding: '4px 12px', borderRadius: 20, fontSize: 11, color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)' },
+  clearFiltersBtn: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 11, cursor: 'pointer' },
   emptyState: { textAlign: 'center', padding: 40 },
   emptyEmoji: { fontSize: 60, marginBottom: 16 },
   resetBtn: { marginTop: 16, padding: '10px 24px', background: '#FF4D6D', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer' },
@@ -666,6 +903,7 @@ const styles = {
   matchInfo: { flex: 1 },
   matchName: { fontWeight: 'bold', fontSize: 15, color: 'white' },
   matchVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
+  matchLocation: { fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 },
   chatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer' },
   likeBackBtn: { background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer' },
   chatHeader: { padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 16 },
@@ -675,6 +913,7 @@ const styles = {
   chatImage: { width: 50, height: 50, borderRadius: 25, objectFit: 'cover' },
   chatName: { fontWeight: 'bold', fontSize: 16, color: 'white' },
   chatVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
+  chatLocation: { fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 },
   chatMessages: { flex: 1, overflowY: 'auto', padding: 16 },
   icebreaker: { textAlign: 'center', padding: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 32, marginBottom: 16 },
   icebreakerText: { marginBottom: 12, color: 'rgba(255,255,255,0.7)', fontSize: 13 },
@@ -698,6 +937,17 @@ const styles = {
   stepTitle: { color: 'white', fontSize: 18, marginBottom: 20, textAlign: 'center' },
   interestsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 },
   interestBtn: { padding: '8px 12px', borderRadius: 50, fontSize: 12, cursor: 'pointer', color: 'white', transition: 'all 0.15s' },
+  locationDropdownContainer: { position: 'relative', width: '100%', marginBottom: 12 },
+  locationButton: { width: '100%', padding: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 28, color: 'white', fontSize: 14, textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  dropdownArrow: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
+  locationDropdown: { position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 20, marginTop: 8, zIndex: 100, border: '1px solid rgba(255,255,255,0.1)', maxHeight: 250, overflow: 'hidden' },
+  locationSearch: { width: '100%', padding: 12, background: 'rgba(255,255,255,0.05)', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'white', outline: 'none' },
+  locationList: { maxHeight: 200, overflowY: 'auto' },
+  locationOption: { padding: '12px 16px', cursor: 'pointer', color: 'white', fontSize: 14, transition: 'background 0.15s', ':hover': { background: 'rgba(255,255,255,0.1)' } },
+  ageRangeContainer: { marginBottom: 16 },
+  rangeInput: { width: '100%', margin: '8px 0', accentColor: '#FF4D6D' },
+  ageRangeValues: { display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8, color: 'white', fontSize: 14 },
+  ageRangeSliders: { marginTop: 8 },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   modalCard: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '32px 28px', textAlign: 'center', width: 300, border: '0.5px solid rgba(255,255,255,0.1)' },
   modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, marginBottom: 24 },
