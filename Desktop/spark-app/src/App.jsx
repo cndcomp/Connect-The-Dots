@@ -23,11 +23,12 @@ export default function App() {
   const [ripples, setRipples] = useState([]);
   const [logoError, setLogoError] = useState(false);
   
-  // Easter egg states
+  // Easter egg state - 5 taps to activate
   const [secretMode, setSecretMode] = useState(false);
-  const [secretStep, setSecretStep] = useState(0);
+  const [secretTapCount, setSecretTapCount] = useState(0);
   const [secretCode, setSecretCode] = useState('');
   const [showToilet, setShowToilet] = useState(false);
+  const [tapTimeout, setTapTimeout] = useState(null);
 
   // Load all users from localStorage
   const [allUsers, setAllUsers] = useState(() => {
@@ -72,6 +73,41 @@ export default function App() {
     !myLikes.includes(user.email)
   );
 
+  // Easter egg functions - 5 taps to activate
+  const handleLogoClick = () => {
+    if (tapTimeout) clearTimeout(tapTimeout);
+    
+    const newTapCount = secretTapCount + 1;
+    setSecretTapCount(newTapCount);
+    
+    if (newTapCount >= 5) {
+      setSecretMode(true);
+      setSecretTapCount(0);
+    }
+    
+    const timeout = setTimeout(() => {
+      setSecretTapCount(0);
+    }, 1000);
+    setTapTimeout(timeout);
+  };
+
+  const handleNumberPad = (num) => {
+    const newCode = secretCode + num;
+    setSecretCode(newCode);
+    if (newCode === '1234') {
+      setShowToilet(true);
+      setSecretMode(false);
+      setSecretCode('');
+    } else if (newCode.length === 4) {
+      setSecretCode('');
+    }
+  };
+
+  const handleCloseToilet = () => {
+    setShowToilet(false);
+    setSecretCode('');
+  };
+
   // Email/Password Signup
   const handleSignup = (e) => {
     e.preventDefault();
@@ -105,9 +141,7 @@ export default function App() {
     } else {
       alert('Invalid email or password!');
     }
-  };
-
-  // Google Login
+  };  // Google Login
   const handleGoogleLogin = () => {
     // @ts-ignore
     const client = google.accounts.oauth2.initTokenClient({
@@ -149,7 +183,9 @@ export default function App() {
       }
     });
     client.requestAccessToken();
-  };  const handleLogout = () => {
+  };
+
+  const handleLogout = () => {
     setLoggedIn(false);
     setCurrentUser(null);
     setActiveChat(null);
@@ -248,37 +284,7 @@ export default function App() {
     setTouchX(0);
     setIsDragging(false);
     setTouchStart(null);
-  };
-
-  // Easter egg functions
-  const handleLogoClick = () => {
-    setSecretStep(prev => prev + 1);
-    setTimeout(() => setSecretStep(0), 1000);
-    if (secretStep + 1 >= 3) {
-      setSecretMode(true);
-      setSecretStep(0);
-    }
-  };
-
-  const handleNumberPad = (num) => {
-    const newCode = secretCode + num;
-    setSecretCode(newCode);
-    if (newCode === '1234') {
-      setShowToilet(true);
-      setSecretMode(false);
-      setSecretCode('');
-    } else if (newCode.length === 4) {
-      alert('Wrong code! Try again.');
-      setSecretCode('');
-    }
-  };
-
-  const handleToiletClick = () => {
-    alert('🧻 Fuck you, Hrishi! 😂');
-    setShowToilet(false);
-  };
-
-  // Logo Component
+  };  // Logo Component with easter egg click handler
   const Logo = () => (
     <div style={styles.logoContainer} onClick={handleLogoClick}>
       {!logoError ? (
@@ -309,7 +315,9 @@ export default function App() {
       )}
       <span style={styles.smallLogoText}>Connect the Dots</span>
     </div>
-  );  // Chat Screen
+  );
+
+  // Chat Screen
   if (activeChat) {
     const match = activeChat;
     const msgs = userData?.messages?.[match.email] || [];
@@ -379,32 +387,6 @@ export default function App() {
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Indian Dating · Real Connections</p>
           
-          {/* Secret Mode Popup */}
-          {secretMode && (
-            <div style={styles.secretOverlay}>
-              <div style={styles.secretCard}>
-                <h3 style={styles.secretTitle}>🔐 Enter Secret Code</h3>
-                <div style={styles.secretCodeDisplay}>****</div>
-                <div style={styles.numberPad}>
-                  {[1,2,3,4,5,6,7,8,9,0].map(num => (
-                    <button key={num} onClick={() => handleNumberPad(num.toString())} style={styles.numBtn}>{num}</button>
-                  ))}
-                </div>
-                <button onClick={() => setSecretMode(false)} style={styles.secretClose}>Close</button>
-              </div>
-            </div>
-          )}
-
-          {/* Toilet Easter Egg */}
-          {showToilet && (
-            <div style={styles.secretOverlay}>
-              <div style={styles.secretCard}>
-                <div style={styles.toiletEmoji} onClick={handleToiletClick}>🚽</div>
-                <p style={styles.toiletText}>Click the toilet...</p>
-              </div>
-            </div>
-          )}
-          
           <button 
             onClick={handleGoogleLogin} 
             style={styles.googleButton}
@@ -449,6 +431,45 @@ export default function App() {
             </>
           )}
         </div>
+        
+        {/* Easter Egg Popups */}
+        {secretMode && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.modalCard}>
+              <div style={styles.modalHeader}>
+                <div style={styles.modalDot}></div>
+                <div style={styles.modalLine}></div>
+                <div style={styles.modalDot}></div>
+              </div>
+              <p style={styles.modalSubtitle}>enter passcode</p>
+              <div style={styles.secretCodeDisplay}>
+                {secretCode.split('').map((_, i) => (
+                  <span key={i} style={styles.codeDot}>●</span>
+                ))}
+                {[...Array(4 - secretCode.length)].map((_, i) => (
+                  <span key={`empty-${i}`} style={styles.codeDotEmpty}>○</span>
+                ))}
+              </div>
+              <div style={styles.numberPad}>
+                {[1,2,3,4,5,6,7,8,9].map(num => (
+                  <button key={num} onClick={() => handleNumberPad(num.toString())} style={styles.numBtn}>{num}</button>
+                ))}
+                <button onClick={() => handleNumberPad('0')} style={styles.numBtn}>0</button>
+                <button onClick={() => setSecretCode(secretCode.slice(0, -1))} style={styles.numBtn}>⌫</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showToilet && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.toiletCard}>
+              <div style={styles.toiletEmoji}>🚽</div>
+              <p style={styles.toiletMessage}>fuck you, hrishi.</p>
+              <button onClick={handleCloseToilet} style={styles.closeBtn}>close</button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -572,6 +593,7 @@ export default function App() {
   );
 }
 
+// Styles
 const styles = {
   container: {
     minHeight: '100vh',
@@ -728,38 +750,122 @@ const styles = {
   sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: '600' },
   settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center' },
   dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600' },
-  secretOverlay: {
+  
+  // Easter egg minimalist styles
+  modalOverlay: {
     position: 'fixed',
-    top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.9)',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.6)',
+    backdropFilter: 'blur(8px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    backdropFilter: 'blur(10px)',
   },
-  secretCard: {
-    background: 'rgba(30,30,50,0.95)',
-    borderRadius: 48,
-    padding: 32,
+  modalCard: {
+    background: 'rgba(20,20,30,0.9)',
+    backdropFilter: 'blur(20px)',
+    borderRadius: 24,
+    padding: '32px 28px',
+    textAlign: 'center',
+    width: 300,
+    border: '0.5px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  modalDot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    background: 'rgba(255,255,255,0.3)',
+  },
+  modalLine: {
+    width: 30,
+    height: 1,
+    background: 'rgba(255,255,255,0.2)',
+  },
+  modalSubtitle: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 24,
+    fontWeight: 400,
+  },
+  secretCodeDisplay: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 28,
+  },
+  codeDot: {
+    fontSize: 24,
+    color: '#FF4D6D',
+  },
+  codeDotEmpty: {
+    fontSize: 24,
+    color: 'rgba(255,255,255,0.2)',
+  },
+  numberPad: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 12,
+    marginBottom: 8,
+  },
+  numBtn: {
+    background: 'rgba(255,255,255,0.05)',
+    border: '0.5px solid rgba(255,255,255,0.08)',
+    padding: '14px 0',
+    borderRadius: 40,
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 400,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    fontFamily: 'monospace',
+  },
+  toiletCard: {
+    background: 'rgba(20,20,30,0.95)',
+    backdropFilter: 'blur(20px)',
+    borderRadius: 32,
+    padding: '40px 32px',
     textAlign: 'center',
     width: 280,
-    border: '1px solid rgba(255,255,255,0.2)',
+    border: '0.5px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 25px 45px rgba(0,0,0,0.4)',
   },
-  secretTitle: { color: 'white', marginBottom: 20, fontSize: 20 },
-  secretCodeDisplay: {
-    background: 'rgba(255,255,255,0.1)',
-    padding: 12,
-    borderRadius: 12,
-    color: '#FF4D6D',
-    fontSize: 24,
-    letterSpacing: 8,
+  toiletEmoji: {
+    fontSize: 64,
     marginBottom: 20,
-    fontFamily: 'monospace'
+    opacity: 0.9,
+    cursor: 'pointer',
   },
-  numberPad: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 },
-  numBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: 16, borderRadius: 40, color: 'white', fontSize: 20, fontWeight: 'bold', cursor: 'pointer' },
-  secretClose: { background: 'rgba(255,255,255,0.2)', border: 'none', padding: 10, borderRadius: 30, color: 'white', cursor: 'pointer', width: '100%' },
-  toiletEmoji: { fontSize: 80, cursor: 'pointer', marginBottom: 20 },
-  toiletText: { color: 'white', fontSize: 18 }
+  toiletMessage: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 15,
+    fontWeight: 400,
+    marginBottom: 28,
+    letterSpacing: -0.2,
+  },
+  closeBtn: {
+    background: 'rgba(255,255,255,0.05)',
+    border: '0.5px solid rgba(255,255,255,0.1)',
+    padding: '10px 24px',
+    borderRadius: 30,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontWeight: 400,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    width: '100%',
+  },
 };
