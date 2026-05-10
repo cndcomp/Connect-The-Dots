@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import './CurryAnimation.css';
 
 // 👇 YOUR GOOGLE CLIENT ID
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
 
 export default function App() {
+  // User state
   const [loggedIn, setLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showSignup, setShowSignup] = useState(false);
@@ -14,9 +16,12 @@ export default function App() {
   const [bio, setBio] = useState('');
   const [vibe, setVibe] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [inputText, setInputText] = useState('');
   const [view, setView] = useState('swipe');
+  
+  // Touch/PC drag state
   const [touchStart, setTouchStart] = useState(null);
   const [touchX, setTouchX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -29,6 +34,12 @@ export default function App() {
   const [secretCode, setSecretCode] = useState('');
   const [showToilet, setShowToilet] = useState(false);
   const [tapTimeout, setTapTimeout] = useState(null);
+  
+  // Curry animation state
+  const [showCurry, setShowCurry] = useState(true);
+  
+  // Image upload ref
+  const fileInputRef = useRef(null);
 
   // Load all users from localStorage
   const [allUsers, setAllUsers] = useState(() => {
@@ -49,10 +60,49 @@ export default function App() {
     document.body.appendChild(script);
   }, []);
 
+  // Curry falling animation effect
+  useEffect(() => {
+    if (showCurry) {
+      const curryTypes = ['🍛', '🍲', '🥘', '🍛', '🍛', '🌶️', '🍚', '🥄'];
+      const container = document.createElement('div');
+      container.className = 'curry-overlay';
+      document.body.appendChild(container);
+      
+      const pieces = [];
+      for (let i = 0; i < 60; i++) {
+        setTimeout(() => {
+          const piece = document.createElement('div');
+          piece.className = 'curry-piece';
+          piece.textContent = curryTypes[Math.floor(Math.random() * curryTypes.length)];
+          piece.style.left = Math.random() * 100 + '%';
+          piece.style.fontSize = (Math.random() * 40 + 20) + 'px';
+          piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
+          piece.style.animationDelay = (Math.random() * 1) + 's';
+          container.appendChild(piece);
+          pieces.push(piece);
+          
+          setTimeout(() => {
+            piece.remove();
+          }, 3000);
+        }, i * 50);
+      }
+      
+      const timeout = setTimeout(() => {
+        container.remove();
+        setShowCurry(false);
+      }, 4000);
+      
+      return () => {
+        clearTimeout(timeout);
+        container.remove();
+      };
+    }
+  }, [showCurry]);
+
   const createRipple = (e, elementId) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
     const id = Date.now();
     setRipples(prev => [...prev, { id, x, y, elementId }]);
     setTimeout(() => {
@@ -72,6 +122,18 @@ export default function App() {
     !myPasses.includes(user.email) &&
     !myLikes.includes(user.email)
   );
+
+  // Image upload handler
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Easter egg functions - 5 taps to activate
   const handleLogoClick = () => {
@@ -108,7 +170,7 @@ export default function App() {
     setSecretCode('');
   };
 
-  // Email/Password Signup
+  // Email/Password Signup with image
   const handleSignup = (e) => {
     e.preventDefault();
     if (allUsers[email]) {
@@ -122,6 +184,7 @@ export default function App() {
       bio: bio || "New to Connect the Dots!",
       vibe: vibe || "Excited to meet people",
       profilePhoto: profilePhoto || "😊",
+      profileImage: profileImage || null,
       matches: [], likes: [], likedBy: [], passes: [], messages: {},
       loginMethod: 'email'
     };
@@ -141,7 +204,7 @@ export default function App() {
     } else {
       alert('Invalid email or password!');
     }
-  };  // Google Login
+  };  // Google Login with image support
   const handleGoogleLogin = () => {
     // @ts-ignore
     const client = google.accounts.oauth2.initTokenClient({
@@ -170,6 +233,7 @@ export default function App() {
                 bio: "New to Connect the Dots!",
                 vibe: "Excited to meet people",
                 profilePhoto: googlePicture ? '🖼️' : "😊",
+                profileImage: googlePicture || null,
                 profileImageUrl: googlePicture,
                 matches: [], likes: [], likedBy: [], passes: [], messages: {},
                 loginMethod: 'google'
@@ -214,6 +278,7 @@ export default function App() {
         age: likedUser.age,
         vibe: likedUser.vibe,
         profilePhoto: likedUser.profilePhoto,
+        profileImage: likedUser.profileImage,
         matchDate: new Date().toISOString()
       });
     }
@@ -264,15 +329,18 @@ export default function App() {
     }
   };
 
+  // Touch and mouse handlers for PC support
   const handleTouchStart = (e, itemId) => {
-    setTouchStart(e.touches[0].clientX);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    setTouchStart(clientX);
     setIsDragging(true);
     createRipple(e, itemId);
   };
 
   const handleTouchMove = (e) => {
     if (!touchStart) return;
-    const delta = e.touches[0].clientX - touchStart;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const delta = clientX - touchStart;
     setTouchX(delta);
   };
 
@@ -284,7 +352,19 @@ export default function App() {
     setTouchX(0);
     setIsDragging(false);
     setTouchStart(null);
-  };  // Logo Component with easter egg click handler
+  };
+
+  const handleMouseUp = (itemId) => {
+    if (Math.abs(touchX) > 50) {
+      if (touchX > 0) handleLike(itemId);
+      else handlePass(itemId);
+    }
+    setTouchX(0);
+    setIsDragging(false);
+    setTouchStart(null);
+  };
+
+  // Logo Component with easter egg click handler
   const Logo = () => (
     <div style={styles.logoContainer} onClick={handleLogoClick}>
       {!logoError ? (
@@ -297,6 +377,7 @@ export default function App() {
       ) : (
         <span style={styles.logoFallback}>🔗✨</span>
       )}
+      <div style={styles.logoHint}>✨ tap 5 times ✨</div>
     </div>
   );
 
@@ -328,7 +409,11 @@ export default function App() {
           <div style={styles.chatHeader}>
             <button onClick={() => setActiveChat(null)} style={styles.backButton}>←</button>
             <div style={styles.chatUser}>
-              <div style={styles.chatEmoji}>{match.profilePhoto || "😊"}</div>
+              {match.profileImage ? (
+                <img src={match.profileImage} alt={match.name} style={styles.chatImage} />
+              ) : (
+                <div style={styles.chatEmoji}>{match.profilePhoto || "😊"}</div>
+              )}
               <div>
                 <div style={styles.chatName}>{match.name}, {match.age}</div>
                 <div style={styles.chatVibe}>{match.vibe}</div>
@@ -376,9 +461,7 @@ export default function App() {
         </div>
       </div>
     );
-  }
-
-  // Login/Signup Screen
+  }  // Login/Signup Screen
   if (!loggedIn) {
     return (
       <div style={styles.container}>
@@ -391,6 +474,7 @@ export default function App() {
             onClick={handleGoogleLogin} 
             style={styles.googleButton}
             onTouchStart={(e) => createRipple(e, 'google')}
+            onMouseDown={(e) => createRipple(e, 'google')}
           >
             <span style={{ fontSize: 20, marginRight: 12 }}>G</span>
             Continue with Google
@@ -407,7 +491,7 @@ export default function App() {
               <form onSubmit={handleLogin}>
                 <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'login')}>Login →</button>
+                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'login')} onMouseDown={(e) => createRipple(e, 'login')}>Login →</button>
               </form>
               <p style={styles.switchText}>
                 New here? <button onClick={() => setShowSignup(true)} style={styles.linkButton}>Create account</button>
@@ -421,9 +505,34 @@ export default function App() {
                 <input style={styles.input} placeholder="Vibe (e.g., Foodie, Traveler)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
                 <textarea style={{...styles.input, minHeight: 60}} placeholder="Short bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
                 <input style={styles.input} placeholder="Profile emoji (e.g., 😊 🏏 🎨)" value={profilePhoto} onChange={(e) => setProfilePhoto(e.target.value)} />
+                
+                {/* Image Upload Section */}
+                <div style={styles.imageUploadArea}>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => fileInputRef.current.click()}
+                    style={styles.imageUploadBtn}
+                    onMouseDown={(e) => createRipple(e, 'upload')}
+                  >
+                    {profileImage ? '📷 Photo added ✓' : '📷 Upload profile photo'}
+                  </button>
+                  {profileImage && (
+                    <div style={styles.imagePreview}>
+                      <img src={profileImage} alt="Preview" style={styles.imagePreviewImg} />
+                    </div>
+                  )}
+                </div>
+                
                 <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'signup')}>Create Account →</button>
+                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'signup')} onMouseDown={(e) => createRipple(e, 'signup')}>Create Account →</button>
               </form>
               <p style={styles.switchText}>
                 Already have an account? <button onClick={() => setShowSignup(false)} style={styles.linkButton}>Login</button>
@@ -509,11 +618,21 @@ export default function App() {
             ) : (
               <div 
                 style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'translateX(0px) rotate(0deg)', transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)'}}
+                onMouseDown={(e) => { setTouchStart(e.clientX); setIsDragging(true); }}
+                onMouseMove={(e) => { if (isDragging && touchStart) { const delta = e.clientX - touchStart; setTouchX(delta); } }}
+                onMouseUp={() => handleMouseUp(currentProfile.email)}
+                onMouseLeave={() => { setTouchX(0); setIsDragging(false); setTouchStart(null); }}
                 onTouchStart={(e) => handleTouchStart(e, currentProfile.email)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={() => handleTouchEnd(currentProfile.email)}
               >
-                <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>
+                <div style={styles.profilePhotoContainer}>
+                  {currentProfile.profileImage ? (
+                    <img src={currentProfile.profileImage} alt={currentProfile.name} style={styles.profilePhotoImg} />
+                  ) : (
+                    <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>
+                  )}
+                </div>
                 <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
                 <p style={styles.swipeVibe}>{currentProfile.vibe}</p>
                 <p style={styles.swipeBio}>"{currentProfile.bio}"</p>
@@ -550,7 +669,11 @@ export default function App() {
                       if (!user) return null;
                       return (
                         <div key={email} style={styles.matchItem}>
-                          <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>
+                          {user.profileImage ? (
+                            <img src={user.profileImage} alt={user.name} style={styles.matchImage} />
+                          ) : (
+                            <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>
+                          )}
                           <div style={styles.matchInfo}>
                             <div style={styles.matchName}>{user.name}, {user.age}</div>
                             <div style={styles.matchVibe}>{user.vibe}</div>
@@ -569,7 +692,11 @@ export default function App() {
                       if (!user) return null;
                       return (
                         <div key={email} style={styles.matchItem} onClick={() => setActiveChat(user)}>
-                          <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>
+                          {user.profileImage ? (
+                            <img src={user.profileImage} alt={user.name} style={styles.matchImage} />
+                          ) : (
+                            <div style={styles.matchEmoji}>{user.profilePhoto || "😊"}</div>
+                          )}
                           <div style={styles.matchInfo}>
                             <div style={styles.matchName}>{user.name}, {user.age}</div>
                             <div style={styles.matchVibe}>{user.vibe}</div>
@@ -640,6 +767,7 @@ const styles = {
   logoContainer: { marginBottom: 16, cursor: 'pointer' },
   logoImage: { width: 80, height: 80, objectFit: 'contain', borderRadius: 20, margin: '0 auto' },
   logoFallback: { fontSize: 64, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
+  logoHint: { fontSize: 8, color: 'rgba(255,255,255,0.2)', marginTop: 4, letterSpacing: 1 },
   smallLogoContainer: { display: 'flex', alignItems: 'center', gap: 8 },
   smallLogoImage: { width: 32, height: 32, objectFit: 'contain' },
   smallLogoFallback: { fontSize: 24 },
@@ -692,11 +820,9 @@ const styles = {
   switchText: { marginTop: 20, fontSize: 14, color: 'rgba(255,255,255,0.5)' },
   linkButton: { background: 'none', border: 'none', color: '#FF4D6D', fontWeight: '600', cursor: 'pointer' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  welcome: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.7)', marginTop: 4 },
-  googleBadge: { marginLeft: 6, fontSize: 10, background: '#4285F4', padding: '2px 6px', borderRadius: 10, color: 'white' },
   logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12 },
   tabs: { display: 'flex', gap: 10, marginBottom: 20 },
-  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, position: 'relative' },
+  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, position: 'relative', transition: 'all 0.15s ease' },
   newBadge: { position: 'absolute', top: -5, right: 10, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 6px', fontSize: 10, fontWeight: 'bold' },
   swipeCard: {
     background: 'rgba(255,255,255,0.1)',
@@ -711,7 +837,9 @@ const styles = {
     transition: 'all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1)',
     position: 'relative'
   },
+  profilePhotoContainer: { marginBottom: 16 },
   profilePhoto: { fontSize: 80, marginBottom: 16, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
+  profilePhotoImg: { width: 120, height: 120, borderRadius: 60, objectFit: 'cover', margin: '0 auto', border: '3px solid rgba(255,255,255,0.2)' },
   swipeName: { fontSize: 28, fontWeight: '700', marginBottom: 4, color: 'white' },
   swipeVibe: { color: '#FF4D6D', fontWeight: '600', fontSize: 14, marginBottom: 8 },
   swipeBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic', lineHeight: 1.5 },
@@ -727,6 +855,7 @@ const styles = {
   sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 12, color: 'rgba(255,255,255,0.7)' },
   matchItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' },
   matchEmoji: { fontSize: 40, minWidth: 50, textAlign: 'center' },
+  matchImage: { width: 50, height: 50, borderRadius: 25, objectFit: 'cover', minWidth: 50 },
   matchInfo: { flex: 1 },
   matchName: { fontWeight: 'bold', fontSize: 15, color: 'white' },
   matchVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
@@ -736,6 +865,7 @@ const styles = {
   backButton: { background: 'rgba(255,255,255,0.1)', border: 'none', fontSize: 24, cursor: 'pointer', color: 'white', width: 40, height: 40, borderRadius: 30 },
   chatUser: { display: 'flex', alignItems: 'center', gap: 12, flex: 1 },
   chatEmoji: { fontSize: 44 },
+  chatImage: { width: 50, height: 50, borderRadius: 25, objectFit: 'cover' },
   chatName: { fontWeight: 'bold', fontSize: 16, color: 'white' },
   chatVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
   chatMessages: { flex: 1, overflowY: 'auto', padding: 16 },
@@ -750,6 +880,22 @@ const styles = {
   sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: '600' },
   settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center' },
   dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600' },
+  
+  // Image upload styles
+  imageUploadArea: { marginBottom: 12 },
+  imageUploadBtn: {
+    width: '100%',
+    padding: 12,
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 28,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  imagePreview: { marginTop: 8, display: 'flex', justifyContent: 'center' },
+  imagePreviewImg: { width: 60, height: 60, borderRadius: 30, objectFit: 'cover', border: '2px solid #FF4D6D' },
   
   // Easter egg minimalist styles
   modalOverlay: {
@@ -775,52 +921,14 @@ const styles = {
     border: '0.5px solid rgba(255,255,255,0.1)',
     boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
   },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-  },
-  modalDot: {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background: 'rgba(255,255,255,0.3)',
-  },
-  modalLine: {
-    width: 30,
-    height: 1,
-    background: 'rgba(255,255,255,0.2)',
-  },
-  modalSubtitle: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 11,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginBottom: 24,
-    fontWeight: 400,
-  },
-  secretCodeDisplay: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 28,
-  },
-  codeDot: {
-    fontSize: 24,
-    color: '#FF4D6D',
-  },
-  codeDotEmpty: {
-    fontSize: 24,
-    color: 'rgba(255,255,255,0.2)',
-  },
-  numberPad: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 12,
-    marginBottom: 8,
-  },
+  modalHeader: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 20 },
+  modalDot: { width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' },
+  modalLine: { width: 30, height: 1, background: 'rgba(255,255,255,0.2)' },
+  modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 24, fontWeight: 400 },
+  secretCodeDisplay: { display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 28 },
+  codeDot: { fontSize: 24, color: '#FF4D6D' },
+  codeDotEmpty: { fontSize: 24, color: 'rgba(255,255,255,0.2)' },
+  numberPad: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 8 },
   numBtn: {
     background: 'rgba(255,255,255,0.05)',
     border: '0.5px solid rgba(255,255,255,0.08)',
@@ -843,19 +951,8 @@ const styles = {
     border: '0.5px solid rgba(255,255,255,0.1)',
     boxShadow: '0 25px 45px rgba(0,0,0,0.4)',
   },
-  toiletEmoji: {
-    fontSize: 64,
-    marginBottom: 20,
-    opacity: 0.9,
-    cursor: 'pointer',
-  },
-  toiletMessage: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 15,
-    fontWeight: 400,
-    marginBottom: 28,
-    letterSpacing: -0.2,
-  },
+  toiletEmoji: { fontSize: 64, marginBottom: 20, opacity: 0.9, cursor: 'pointer' },
+  toiletMessage: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: 400, marginBottom: 28, letterSpacing: -0.2 },
   closeBtn: {
     background: 'rgba(255,255,255,0.05)',
     border: '0.5px solid rgba(255,255,255,0.1)',
