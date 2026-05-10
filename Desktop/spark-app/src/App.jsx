@@ -13,7 +13,10 @@ export default function App() {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [activeChat, setActiveChat] = useState(null);
   const [inputText, setInputText] = useState('');
-  const [view, setView] = useState('swipe'); // 'swipe' or 'matches'
+  const [view, setView] = useState('swipe');
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchX, setTouchX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Load all users from localStorage
   const [allUsers, setAllUsers] = useState(() => {
@@ -21,52 +24,37 @@ export default function App() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Save users whenever they change
   useEffect(() => {
     localStorage.setItem('connect_dots_users', JSON.stringify(allUsers));
   }, [allUsers]);
 
-  // Current user's data
   const userData = currentUser ? allUsers[currentUser.email] : null;
   const myMatches = userData?.matches || [];
-  const myLikes = userData?.likes || []; // People I've liked
-  const likedBy = userData?.likedBy || []; // People who liked me
-  const myPasses = userData?.passes || []; // People I've passed on
-
-  // Find mutual matches (people who liked me back)
+  const myLikes = userData?.likes || [];
+  const likedBy = userData?.likedBy || [];
+  const myPasses = userData?.passes || [];
   const mutualMatches = myLikes.filter(id => likedBy.includes(id));
-
-  // Get all other users (excluding myself and people I've passed on)
+  
   const otherUsers = Object.values(allUsers).filter(user => 
     user.email !== currentUser?.email && 
     !myPasses.includes(user.email) &&
     !myLikes.includes(user.email)
   );
 
-  // Current user's full profile
-  const myFullProfile = currentUser ? allUsers[currentUser.email] : null;
-
-  // Signup
   const handleSignup = (e) => {
     e.preventDefault();
     if (allUsers[email]) {
-      alert('Account already exists! Please login.');
+      alert('Account already exists!');
       return;
     }
     
     const newUser = {
-      email,
-      password,
-      name,
+      email, password, name,
       age: parseInt(age) || 25,
       bio: bio || "New to Connect the Dots!",
       vibe: vibe || "Excited to meet people",
       profilePhoto: profilePhoto || "😊",
-      matches: [],
-      likes: [],
-      likedBy: [],
-      passes: [],
-      messages: {}
+      matches: [], likes: [], likedBy: [], passes: [], messages: {}
     };
     
     setAllUsers({ ...allUsers, [email]: newUser });
@@ -74,7 +62,6 @@ export default function App() {
     setLoggedIn(true);
   };
 
-  // Login
   const handleLogin = (e) => {
     e.preventDefault();
     const user = allUsers[email];
@@ -86,15 +73,12 @@ export default function App() {
     }
   };
 
-  // Logout
   const handleLogout = () => {
     setLoggedIn(false);
     setCurrentUser(null);
     setActiveChat(null);
-    setView('swipe');
   };
 
-  // Update current user's data
   const updateMyData = (updates) => {
     if (!currentUser) return;
     setAllUsers(prev => ({
@@ -103,20 +87,15 @@ export default function App() {
     }));
   };
 
-  // Like someone
   const handleLike = (likedUserEmail) => {
     const likedUser = allUsers[likedUserEmail];
     if (!likedUser) return;
 
-    // Add to my likes
     const newLikes = [...myLikes, likedUserEmail];
-    
-    // Check if they already liked me
     const theyLikedMe = likedUser.likedBy?.includes(currentUser.email);
     
     let newMatches = [...myMatches];
     if (theyLikedMe) {
-      // It's a match!
       newMatches.push({
         email: likedUserEmail,
         name: likedUser.name,
@@ -127,12 +106,8 @@ export default function App() {
       });
     }
     
-    updateMyData({
-      likes: newLikes,
-      matches: newMatches
-    });
+    updateMyData({ likes: newLikes, matches: newMatches });
     
-    // Add to their likedBy
     setAllUsers(prev => ({
       ...prev,
       [likedUserEmail]: {
@@ -146,14 +121,10 @@ export default function App() {
     }
   };
 
-  // Pass on someone
   const handlePass = (passedUserEmail) => {
-    updateMyData({
-      passes: [...myPasses, passedUserEmail]
-    });
+    updateMyData({ passes: [...myPasses, passedUserEmail] });
   };
 
-  // Send a message
   const sendMessage = (matchEmail, text) => {
     if (!text.trim()) return;
     
@@ -172,24 +143,8 @@ export default function App() {
     setInputText('');
   };
 
-  // Receive a message (simulated for demo)
-  const receiveMessage = (matchEmail, replyText) => {
-    const currentMessages = userData?.messages?.[matchEmail] || [];
-    const newMessages = {
-      ...(userData?.messages || {}),
-      [matchEmail]: [...currentMessages, { 
-        from: "them", 
-        text: replyText, 
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp: Date.now()
-      }]
-    };
-    updateMyData({ messages: newMessages });
-  };
-
-  // Delete account completely
   const deleteAccount = () => {
-    if (confirm('⚠️ WARNING: This will permanently delete your account and all data. This cannot be undone. Are you sure?')) {
+    if (confirm('⚠️ Delete your account? This cannot be undone.')) {
       const newUsers = { ...allUsers };
       delete newUsers[currentUser.email];
       setAllUsers(newUsers);
@@ -197,9 +152,25 @@ export default function App() {
     }
   };
 
-  // Get match details
-  const getMatchDetails = (matchEmail) => {
-    return allUsers[matchEmail];
+  // Touch handlers for liquid glass effect
+  const handleTouchStart = (e, itemId) => {
+    setTouchStart(e.touches[0].clientX);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStart) return;
+    const delta = e.touches[0].clientX - touchStart;
+    setTouchX(delta);
+  };
+
+  const handleTouchEnd = (itemId, action) => {
+    if (Math.abs(touchX) > 50) {
+      if (touchX > 0) action();
+    }
+    setTouchX(0);
+    setIsDragging(false);
+    setTouchStart(null);
   };
 
   // Chat Screen
@@ -225,8 +196,17 @@ export default function App() {
               <div style={styles.icebreaker}>
                 <div style={styles.icebreakerText}>💬 Start the conversation!</div>
                 <button onClick={() => {
-                  sendMessage(match.email, `Hey ${match.name}! Great to match with you 😊`);
-                  setTimeout(() => receiveMessage(match.email, `Hey! So glad we connected! How's your day going? ✨`), 1000);
+                  sendMessage(match.email, `Hey ${match.name}! Great to meet you 😊`);
+                  setTimeout(() => {
+                    const replies = ["Hey! So glad we matched ✨", "Love your vibe!", "How's your day going?", "You seem really cool!"];
+                    const reply = replies[Math.floor(Math.random() * replies.length)];
+                    const currentMsgs = userData?.messages?.[match.email] || [];
+                    const newMsgs = {
+                      ...(userData?.messages || {}),
+                      [match.email]: [...currentMsgs, { from: "them", text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), timestamp: Date.now() }]
+                    };
+                    updateMyData({ messages: newMsgs });
+                  }, 1000);
                 }} style={styles.icebreakerBtn}>Say Hello 👋</button>
               </div>
             )}
@@ -258,7 +238,7 @@ export default function App() {
   if (!loggedIn) {
     return (
       <div style={styles.container}>
-        <div style={styles.card}>
+        <div style={styles.glassCard}>
           <div style={styles.logo}>🔗✨</div>
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Indian Dating · Real Connections</p>
@@ -279,8 +259,8 @@ export default function App() {
               <form onSubmit={handleSignup}>
                 <input style={styles.input} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
                 <input style={styles.input} placeholder="Age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
-                <input style={styles.input} placeholder="Vibe (e.g., Foodie, Traveler, Artist)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
-                <textarea style={{...styles.input, minHeight: 60}} placeholder="Short bio about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} />
+                <input style={styles.input} placeholder="Vibe (e.g., Foodie, Traveler)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
+                <textarea style={{...styles.input, minHeight: 60}} placeholder="Short bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
                 <input style={styles.input} placeholder="Profile emoji (e.g., 😊 🏏 🎨)" value={profilePhoto} onChange={(e) => setProfilePhoto(e.target.value)} />
                 <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
@@ -297,6 +277,7 @@ export default function App() {
   }
 
   // Main App Screen
+  const currentProfile = otherUsers[0];
   const hasNewLikes = likedBy.length > 0 && !likedBy.some(email => myLikes.includes(email));
 
   return (
@@ -305,23 +286,21 @@ export default function App() {
         <div style={styles.header}>
           <div>
             <div style={styles.logoSmall}>🔗 Connect the Dots</div>
-            <p style={styles.welcome}>{myFullProfile?.name}, {myFullProfile?.age}</p>
+            <p style={styles.welcome}>{userData?.name}, {userData?.age}</p>
           </div>
           <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
         </div>
 
-        {/* Navigation Tabs */}
         <div style={styles.tabs}>
-          <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : '#f0f0f0', color: view === 'swipe' ? 'white' : '#666'}}>
+          <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.15)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>
             🔍 Swipe
           </button>
-          <button onClick={() => setView('matches')} style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : '#f0f0f0', color: view === 'matches' ? 'white' : '#666'}}>
+          <button onClick={() => setView('matches')} style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.15)', color: view === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}>
             💬 Matches ({mutualMatches.length})
             {hasNewLikes && <span style={styles.newBadge}>!</span>}
           </button>
         </div>
 
-        {/* Swipe View */}
         {view === 'swipe' && (
           <>
             {otherUsers.length === 0 ? (
@@ -332,28 +311,29 @@ export default function App() {
                 <button onClick={() => setView('matches')} style={styles.resetBtn}>View Matches →</button>
               </div>
             ) : (
-              <>
-                <div style={styles.swipeCard}>
-                  <div style={styles.profilePhoto}>{otherUsers[0].profilePhoto || "😊"}</div>
-                  <h2 style={styles.swipeName}>{otherUsers[0].name}, {otherUsers[0].age}</h2>
-                  <p style={styles.swipeVibe}>{otherUsers[0].vibe}</p>
-                  <p style={styles.swipeBio}>"{otherUsers[0].bio}"</p>
-                </div>
-
-                <div style={styles.actions}>
-                  <button onClick={() => handlePass(otherUsers[0].email)} style={styles.nopeBtn}>✕</button>
-                  <button onClick={() => handleLike(otherUsers[0].email)} style={styles.likeBtn}>♥</button>
-                </div>
-                <p style={styles.swipeHint}>{otherUsers.length} profile{otherUsers.length !== 1 ? 's' : ''} left</p>
-              </>
+              <div 
+                style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'translateX(0px) rotate(0deg)', transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)'}}
+                onTouchStart={(e) => handleTouchStart(e, currentProfile.email)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={() => handleTouchEnd(currentProfile.email, () => handleLike(currentProfile.email))}
+              >
+                <div style={styles.profilePhoto}>{currentProfile.profilePhoto || "😊"}</div>
+                <h2 style={styles.swipeName}>{currentProfile.name}, {currentProfile.age}</h2>
+                <p style={styles.swipeVibe}>{currentProfile.vibe}</p>
+                <p style={styles.swipeBio}>"{currentProfile.bio}"</p>
+                {isDragging && (
+                  <div style={{...styles.dragIndicator, opacity: Math.min(Math.abs(touchX) / 100, 1)}}>
+                    {touchX > 0 ? '♥ LIKE' : '✕ NOPE'}
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}
 
-        {/* Matches View */}
         {view === 'matches' && (
           <>
-            {mutualMatches.length === 0 ? (
+            {mutualMatches.length === 0 && likedBy.filter(email => !myLikes.includes(email)).length === 0 ? (
               <div style={styles.emptyState}>
                 <div style={styles.emptyEmoji}>💔</div>
                 <h3>No matches yet</h3>
@@ -362,7 +342,6 @@ export default function App() {
               </div>
             ) : (
               <>
-                {/* People who liked me (but I haven't liked back) */}
                 {likedBy.filter(email => !myLikes.includes(email)).length > 0 && (
                   <div style={styles.likesSection}>
                     <p style={styles.sectionTitle}>❤️ Liked You ({likedBy.filter(email => !myLikes.includes(email)).length})</p>
@@ -382,31 +361,11 @@ export default function App() {
                     })}
                   </div>
                 )}
-
-                {/* Mutual matches */}
-                <div style={styles.matchesSection}>
-                  <p style={styles.sectionTitle}>✨ Your Matches ({mutualMatches.length}) ✨</p>
-                  {mutualMatches.map(email => {
-                    const match = allUsers[email];
-                    if (!match) return null;
-                    return (
-                      <div key={email} style={styles.matchItem} onClick={() => setActiveChat(match)}>
-                        <div style={styles.matchEmoji}>{match.profilePhoto || "😊"}</div>
-                        <div style={styles.matchInfo}>
-                          <div style={styles.matchName}>{match.name}, {match.age}</div>
-                          <div style={styles.matchVibe}>{match.vibe}</div>
-                        </div>
-                        <button style={styles.chatBtn}>💬 Chat</button>
-                      </div>
-                    );
-                  })}
-                </div>
               </>
             )}
           </>
         )}
 
-        {/* Settings */}
         <div style={styles.settingsSection}>
           <button onClick={deleteAccount} style={styles.dangerBtn}>🗑️ Delete Account</button>
         </div>
@@ -418,55 +377,62 @@ export default function App() {
 const styles = {
   container: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+    background: 'radial-gradient(circle at 20% 50%, #1a1a2e, #0f172a)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    padding: 20
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+    padding: 20,
   },
-  card: {
-    background: 'white',
-    borderRadius: 32,
+  glassCard: {
+    background: 'rgba(255, 255, 255, 0.08)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    borderRadius: 48,
     padding: 40,
     width: '100%',
     maxWidth: 400,
     textAlign: 'center',
-    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+    boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
   },
   appCard: {
-    background: 'white',
-    borderRadius: 32,
+    background: 'rgba(255, 255, 255, 0.06)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    borderRadius: 48,
     padding: 24,
     width: '100%',
     maxWidth: 450,
-    maxHeight: '90vh',
+    maxHeight: '85vh',
     overflowY: 'auto',
-    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+    boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
   },
   chatCard: {
-    background: 'white',
-    borderRadius: 32,
+    background: 'rgba(255, 255, 255, 0.06)',
+    backdropFilter: 'blur(20px) saturate(180%)',
+    borderRadius: 48,
     width: '100%',
     maxWidth: 450,
     height: '90vh',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+    boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
   },
-  logo: { fontSize: 60, marginBottom: 16 },
-  logoSmall: { fontSize: 16, fontWeight: 'bold', color: '#FF4D6D' },
-  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 8, color: '#1a1a2e' },
-  subtitle: { color: '#666', marginBottom: 32 },
+  logo: { fontSize: 64, marginBottom: 16, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
+  logoSmall: { fontSize: 16, fontWeight: '600', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 8, background: 'linear-gradient(135deg, #fff, #cbd5e1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  subtitle: { color: 'rgba(255,255,255,0.5)', marginBottom: 32 },
   input: {
     width: '100%',
-    padding: 14,
+    padding: 16,
     marginBottom: 12,
-    border: '1px solid #ddd',
-    borderRadius: 16,
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: 28,
     fontSize: 14,
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    background: 'rgba(255,255,255,0.05)',
+    color: 'white',
+    outline: 'none',
+    transition: 'all 0.2s ease',
   },
   button: {
     background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)',
@@ -475,56 +441,53 @@ const styles = {
     padding: 14,
     borderRadius: 50,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     cursor: 'pointer',
-    width: '100%'
+    width: '100%',
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
   },
-  switchText: { marginTop: 20, fontSize: 14, color: '#666' },
-  linkButton: { background: 'none', border: 'none', color: '#FF4D6D', fontWeight: 'bold', cursor: 'pointer' },
+  switchText: { marginTop: 20, fontSize: 14, color: 'rgba(255,255,255,0.5)' },
+  linkButton: { background: 'none', border: 'none', color: '#FF4D6D', fontWeight: '600', cursor: 'pointer' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  welcome: { fontSize: 14, fontWeight: '600', color: '#333', marginTop: 4 },
-  logoutBtn: { background: '#eee', border: 'none', padding: '8px 16px', borderRadius: 20, cursor: 'pointer' },
+  welcome: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.7)', marginTop: 4 },
+  logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12 },
   tabs: { display: 'flex', gap: 10, marginBottom: 20 },
-  tab: { flex: 1, padding: '10px', borderRadius: 30, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 14, position: 'relative' },
+  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, transition: 'all 0.2s ease', position: 'relative' },
   newBadge: { position: 'absolute', top: -5, right: 10, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 6px', fontSize: 10, fontWeight: 'bold' },
-  swipeCard: { background: 'linear-gradient(145deg, #fafafa, #fff)', borderRadius: 24, padding: 32, textAlign: 'center', marginBottom: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' },
-  profilePhoto: { fontSize: 80, marginBottom: 16 },
-  swipeName: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
-  swipeVibe: { color: '#FF4D6D', fontWeight: 600, fontSize: 14, marginBottom: 8 },
-  swipeBio: { color: '#666', fontSize: 14, fontStyle: 'italic', lineHeight: 1.5 },
-  actions: { display: 'flex', gap: 20, justifyContent: 'center', marginBottom: 12 },
-  nopeBtn: { background: '#fff', border: '2px solid #FF4D6D', borderRadius: 50, width: 60, height: 60, fontSize: 28, color: '#FF4D6D', cursor: 'pointer' },
-  likeBtn: { background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', border: 'none', borderRadius: 50, width: 70, height: 70, fontSize: 32, color: 'white', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255,77,109,0.3)' },
-  swipeHint: { textAlign: 'center', fontSize: 12, color: '#999', marginBottom: 16 },
+  swipeCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: 48, padding: 32, textAlign: 'center', marginBottom: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'grab', transition: 'all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)', position: 'relative' },
+  profilePhoto: { fontSize: 80, marginBottom: 16, filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.2))' },
+  swipeName: { fontSize: 28, fontWeight: '700', marginBottom: 4, color: 'white' },
+  swipeVibe: { color: '#FF4D6D', fontWeight: '600', fontSize: 14, marginBottom: 8 },
+  swipeBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic', lineHeight: 1.5 },
+  dragIndicator: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 32, fontWeight: 'bold', color: 'white', textShadow: '0 0 20px rgba(0,0,0,0.5)', pointerEvents: 'none', whiteSpace: 'nowrap' },
   emptyState: { textAlign: 'center', padding: 40 },
   emptyEmoji: { fontSize: 60, marginBottom: 16 },
-  resetBtn: { marginTop: 16, padding: '10px 24px', background: '#FF4D6D', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer' },
+  resetBtn: { marginTop: 16, padding: '10px 24px', background: '#FF4D6D', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer', fontWeight: '600' },
   likesSection: { marginBottom: 20 },
-  matchesSection: {},
-  sectionTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 12, color: '#666' },
-  matchItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid #eee', cursor: 'pointer' },
+  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 12, color: 'rgba(255,255,255,0.7)' },
+  matchItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'transform 0.1s ease' },
   matchEmoji: { fontSize: 40, minWidth: 50, textAlign: 'center' },
   matchInfo: { flex: 1 },
-  matchName: { fontWeight: 'bold', fontSize: 15 },
-  matchVibe: { fontSize: 12, color: '#999', marginTop: 2 },
-  chatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 20, cursor: 'pointer' },
-  likeBackBtn: { background: '#4CAF50', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 20, cursor: 'pointer' },
-  chatHeader: { padding: 16, borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: 16, background: 'white' },
-  backButton: { background: 'none', border: 'none', fontSize: 24, cursor: 'pointer' },
+  matchName: { fontWeight: 'bold', fontSize: 15, color: 'white' },
+  matchVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+  chatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontWeight: '600' },
+  likeBackBtn: { background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontWeight: '600' },
+  chatHeader: { padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 16, background: 'transparent' },
+  backButton: { background: 'rgba(255,255,255,0.1)', border: 'none', fontSize: 24, cursor: 'pointer', color: 'white', width: 40, height: 40, borderRadius: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   chatUser: { display: 'flex', alignItems: 'center', gap: 12, flex: 1 },
-  chatEmoji: { fontSize: 40 },
-  chatName: { fontWeight: 'bold', fontSize: 16 },
-  chatVibe: { fontSize: 12, color: '#999', marginTop: 2 },
-  chatMessages: { flex: 1, overflowY: 'auto', padding: 16, background: '#fafafa' },
-  icebreaker: { textAlign: 'center', padding: 20, background: 'white', borderRadius: 16, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' },
-  icebreakerText: { marginBottom: 12, color: '#666', fontSize: 13 },
-  icebreakerBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 25, cursor: 'pointer', fontSize: 14 },
+  chatEmoji: { fontSize: 44 },
+  chatName: { fontWeight: 'bold', fontSize: 16, color: 'white' },
+  chatVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+  chatMessages: { flex: 1, overflowY: 'auto', padding: 16 },
+  icebreaker: { textAlign: 'center', padding: 20, background: 'rgba(255,255,255,0.05)', borderRadius: 32, marginBottom: 16 },
+  icebreakerText: { marginBottom: 12, color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+  icebreakerBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 50, cursor: 'pointer', fontSize: 14, fontWeight: '600' },
   message: { display: 'flex', marginBottom: 12 },
-  messageBubble: { maxWidth: '70%', padding: '10px 14px', borderRadius: 18, fontSize: 14 },
+  messageBubble: { maxWidth: '70%', padding: '10px 14px', borderRadius: 24, fontSize: 14, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' },
   messageTime: { fontSize: 10, opacity: 0.6, marginTop: 4 },
-  chatInput: { padding: 16, borderTop: '1px solid #eee', display: 'flex', gap: 10, background: 'white' },
-  chatInputField: { flex: 1, padding: 12, border: '1px solid #ddd', borderRadius: 25, fontSize: 14, outline: 'none' },
-  sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 20px', borderRadius: 25, cursor: 'pointer', fontWeight: 'bold' },
-  settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'center' },
-  dangerBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 20, cursor: 'pointer', fontSize: 12 }
+  chatInput: { padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: 10 },
+  chatInputField: { flex: 1, padding: 14, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 40, fontSize: 14, outline: 'none', background: 'rgba(255,255,255,0.05)', color: 'white' },
+  sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: '600' },
+  settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center' },
+  dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600' }
 };
