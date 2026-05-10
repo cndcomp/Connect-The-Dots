@@ -1,8 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
-import './CurryAnimation.css';
 
 // 👇 YOUR GOOGLE CLIENT ID
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
+
+// Simple curry animation CSS inline
+const curryStyle = document.createElement('style');
+curryStyle.textContent = `
+  @keyframes curryFall {
+    0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+  }
+  .curry-piece {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    font-size: 30px;
+    animation: curryFall linear forwards;
+  }
+  .curry-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9998;
+    overflow: hidden;
+  }
+`;
+document.head.appendChild(curryStyle);
 
 export default function App() {
   // User state
@@ -25,7 +51,6 @@ export default function App() {
   const [touchStart, setTouchStart] = useState(null);
   const [touchX, setTouchX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [ripples, setRipples] = useState([]);
   const [logoError, setLogoError] = useState(false);
   
   // Easter egg state - 5 taps to activate
@@ -68,7 +93,6 @@ export default function App() {
       container.className = 'curry-overlay';
       document.body.appendChild(container);
       
-      const pieces = [];
       for (let i = 0; i < 60; i++) {
         setTimeout(() => {
           const piece = document.createElement('div');
@@ -79,7 +103,6 @@ export default function App() {
           piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
           piece.style.animationDelay = (Math.random() * 1) + 's';
           container.appendChild(piece);
-          pieces.push(piece);
           
           setTimeout(() => {
             piece.remove();
@@ -98,17 +121,6 @@ export default function App() {
       };
     }
   }, [showCurry]);
-
-  const createRipple = (e, elementId) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
-    const id = Date.now();
-    setRipples(prev => [...prev, { id, x, y, elementId }]);
-    setTimeout(() => {
-      setRipples(prev => prev.filter(r => r.id !== id));
-    }, 600);
-  };
 
   const userData = currentUser ? allUsers[currentUser.email] : null;
   const myMatches = userData?.matches || [];
@@ -204,10 +216,16 @@ export default function App() {
     } else {
       alert('Invalid email or password!');
     }
-  };  // Google Login with image support
+  };
+
+  // Google Login with image support
   const handleGoogleLogin = () => {
-    // @ts-ignore
-    const client = google.accounts.oauth2.initTokenClient({
+    if (typeof window.google === 'undefined') {
+      alert('Google login loading. Please try again in a moment.');
+      return;
+    }
+    
+    const client = window.google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: 'email profile openid',
       callback: (tokenResponse) => {
@@ -334,7 +352,6 @@ export default function App() {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     setTouchStart(clientX);
     setIsDragging(true);
-    createRipple(e, itemId);
   };
 
   const handleTouchMove = (e) => {
@@ -364,7 +381,7 @@ export default function App() {
     setTouchStart(null);
   };
 
-  // Logo Component with easter egg click handler
+  // Logo Component
   const Logo = () => (
     <div style={styles.logoContainer} onClick={handleLogoClick}>
       {!logoError ? (
@@ -426,16 +443,6 @@ export default function App() {
                 <div style={styles.icebreakerText}>💬 Start the conversation!</div>
                 <button onClick={() => {
                   sendMessage(match.email, `Hey ${match.name}! Great to meet you 😊`);
-                  setTimeout(() => {
-                    const replies = ["Hey! So glad we matched ✨", "Love your vibe!", "How's your day going?", "You seem really cool!"];
-                    const reply = replies[Math.floor(Math.random() * replies.length)];
-                    const currentMsgs = userData?.messages?.[match.email] || [];
-                    const newMsgs = {
-                      ...(userData?.messages || {}),
-                      [match.email]: [...currentMsgs, { from: "them", text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), timestamp: Date.now() }]
-                    };
-                    updateMyData({ messages: newMsgs });
-                  }, 1000);
                 }} style={styles.icebreakerBtn}>Say Hello 👋</button>
               </div>
             )}
@@ -461,7 +468,9 @@ export default function App() {
         </div>
       </div>
     );
-  }  // Login/Signup Screen
+  }
+
+  // Login/Signup Screen
   if (!loggedIn) {
     return (
       <div style={styles.container}>
@@ -470,12 +479,7 @@ export default function App() {
           <h1 style={styles.title}>Connect the Dots</h1>
           <p style={styles.subtitle}>Indian Dating · Real Connections</p>
           
-          <button 
-            onClick={handleGoogleLogin} 
-            style={styles.googleButton}
-            onTouchStart={(e) => createRipple(e, 'google')}
-            onMouseDown={(e) => createRipple(e, 'google')}
-          >
+          <button onClick={handleGoogleLogin} style={styles.googleButton}>
             <span style={{ fontSize: 20, marginRight: 12 }}>G</span>
             Continue with Google
           </button>
@@ -491,7 +495,7 @@ export default function App() {
               <form onSubmit={handleLogin}>
                 <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'login')} onMouseDown={(e) => createRipple(e, 'login')}>Login →</button>
+                <button type="submit" style={styles.button}>Login →</button>
               </form>
               <p style={styles.switchText}>
                 New here? <button onClick={() => setShowSignup(true)} style={styles.linkButton}>Create account</button>
@@ -502,11 +506,10 @@ export default function App() {
               <form onSubmit={handleSignup}>
                 <input style={styles.input} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
                 <input style={styles.input} placeholder="Age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
-                <input style={styles.input} placeholder="Vibe (e.g., Foodie, Traveler)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
+                <input style={styles.input} placeholder="Vibe" value={vibe} onChange={(e) => setVibe(e.target.value)} />
                 <textarea style={{...styles.input, minHeight: 60}} placeholder="Short bio..." value={bio} onChange={(e) => setBio(e.target.value)} />
-                <input style={styles.input} placeholder="Profile emoji (e.g., 😊 🏏 🎨)" value={profilePhoto} onChange={(e) => setProfilePhoto(e.target.value)} />
+                <input style={styles.input} placeholder="Profile emoji" value={profilePhoto} onChange={(e) => setProfilePhoto(e.target.value)} />
                 
-                {/* Image Upload Section */}
                 <div style={styles.imageUploadArea}>
                   <input 
                     type="file" 
@@ -515,12 +518,7 @@ export default function App() {
                     onChange={handleImageUpload}
                     style={{ display: 'none' }}
                   />
-                  <button 
-                    type="button" 
-                    onClick={() => fileInputRef.current.click()}
-                    style={styles.imageUploadBtn}
-                    onMouseDown={(e) => createRipple(e, 'upload')}
-                  >
+                  <button type="button" onClick={() => fileInputRef.current?.click()} style={styles.imageUploadBtn}>
                     {profileImage ? '📷 Photo added ✓' : '📷 Upload profile photo'}
                   </button>
                   {profileImage && (
@@ -532,7 +530,7 @@ export default function App() {
                 
                 <input style={styles.input} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                 <input style={styles.input} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button type="submit" style={styles.button} onTouchStart={(e) => createRipple(e, 'signup')} onMouseDown={(e) => createRipple(e, 'signup')}>Create Account →</button>
+                <button type="submit" style={styles.button}>Create Account →</button>
               </form>
               <p style={styles.switchText}>
                 Already have an account? <button onClick={() => setShowSignup(false)} style={styles.linkButton}>Login</button>
@@ -586,7 +584,6 @@ export default function App() {
   // Main App Screen
   const currentProfile = otherUsers[0];
   const hasNewLikes = likedBy.length > 0 && !likedBy.some(email => myLikes.includes(email));
-  const isGoogleUser = userData?.loginMethod === 'google';
 
   return (
     <div style={styles.container}>
@@ -720,7 +717,6 @@ export default function App() {
   );
 }
 
-// Styles
 const styles = {
   container: {
     minHeight: '100vh',
@@ -880,8 +876,6 @@ const styles = {
   sendButton: { background: '#FF4D6D', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: '600' },
   settingsSection: { marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center' },
   dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: '600' },
-  
-  // Image upload styles
   imageUploadArea: { marginBottom: 12 },
   imageUploadBtn: {
     width: '100%',
@@ -896,8 +890,6 @@ const styles = {
   },
   imagePreview: { marginTop: 8, display: 'flex', justifyContent: 'center' },
   imagePreviewImg: { width: 60, height: 60, borderRadius: 30, objectFit: 'cover', border: '2px solid #FF4D6D' },
-  
-  // Easter egg minimalist styles
   modalOverlay: {
     position: 'fixed',
     top: 0,
