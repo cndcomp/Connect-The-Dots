@@ -13,6 +13,7 @@
     "@react-native-async-storage/async-storage": "^3.0.2",
     "@react-navigation/native": "^7.2.4",
     "@react-navigation/stack": "^7.8.13",
+    "ldrs": "^1.1.9",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-native-gesture-handler": "^2.31.2",
