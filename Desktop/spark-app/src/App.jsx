@@ -10,8 +10,8 @@ const LGBTQ_OPTIONS = [
   '🏳️‍🌈 Pansexual', '🏳️‍🌈 Asexual', '🏳️‍🌈 Queer', '🏳️‍🌈 Questioning', '🏳️‍🌈 Prefer not to say'
 ];
 
-// Video Call Component
-const VideoCallModal = ({ isOpen, onClose, targetUser, currentUser }) => {
+// Video/Audio Call Component
+const CallModal = ({ isOpen, onClose, targetUser, currentUser, isVideo }) => {
   const [myStream, setMyStream] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -26,11 +26,11 @@ const VideoCallModal = ({ isOpen, onClose, targetUser, currentUser }) => {
 
   const startCall = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
       setMyStream(stream);
       if (myVideoRef.current) myVideoRef.current.srcObject = stream;
       setTimeout(() => setIsCallActive(true), 1000);
-    } catch (err) { alert('Could not access camera/microphone'); }
+    } catch (err) { alert('Could not access camera/microphone'); onClose(); }
   };
 
   const toggleMute = () => {
@@ -38,7 +38,7 @@ const VideoCallModal = ({ isOpen, onClose, targetUser, currentUser }) => {
   };
 
   const toggleVideo = () => {
-    if (myStream) { myStream.getVideoTracks().forEach(track => track.enabled = !track.enabled); setIsVideoOff(!isVideoOff); }
+    if (myStream && isVideo) { myStream.getVideoTracks().forEach(track => track.enabled = !track.enabled); setIsVideoOff(!isVideoOff); }
   };
 
   const endCall = () => {
@@ -49,23 +49,51 @@ const VideoCallModal = ({ isOpen, onClose, targetUser, currentUser }) => {
   if (!isOpen) return null;
 
   return (
-    <div style={styles.callOverlay}>
-      <div style={styles.callContainer}>
-        <div style={styles.remoteVideoContainer}>
-          <video ref={theirVideoRef} autoPlay playsInline style={styles.remoteVideo} />
-          <div style={styles.callingText}>{!isCallActive ? `Calling ${targetUser?.name}...` : `Connected with ${targetUser?.name}`}</div>
-        </div>
-        <div style={styles.localVideoContainer}>
-          <video ref={myVideoRef} autoPlay playsInline muted style={styles.localVideo} />
-        </div>
-        <div style={styles.callControls}>
-          <button onClick={toggleMute} style={styles.callControlBtn}>{isMuted ? '🔇' : '🎤'}</button>
-          <button onClick={toggleVideo} style={styles.callControlBtn}>{isVideoOff ? '📹❌' : '📹'}</button>
-          <button onClick={endCall} style={{...styles.callControlBtn, ...styles.endCallBtn}}>📞</button>
+    <div style={callStyles.overlay}>
+      <div style={callStyles.container}>
+        {isVideo && (
+          <>
+            <div style={callStyles.remoteContainer}>
+              <video ref={theirVideoRef} autoPlay playsInline style={callStyles.remoteVideo} />
+            </div>
+            <div style={callStyles.localContainer}>
+              <video ref={myVideoRef} autoPlay playsInline muted style={callStyles.localVideo} />
+            </div>
+          </>
+        )}
+        {!isVideo && (
+          <div style={callStyles.audioContainer}>
+            <div style={callStyles.audioAvatar}>{targetUser?.profileImage ? <img src={targetUser.profileImage} alt="" style={callStyles.audioAvatarImg} /> : <span style={callStyles.audioAvatarEmoji}>😊</span>}</div>
+            <div style={callStyles.audioName}>{targetUser?.name}</div>
+          </div>
+        )}
+        <div style={callStyles.callingText}>{!isCallActive ? `Calling ${targetUser?.name}...` : `Connected with ${targetUser?.name}`}</div>
+        <div style={callStyles.controls}>
+          <button onClick={toggleMute} style={callStyles.controlBtn}>{isMuted ? '🔇' : '🎤'}</button>
+          {isVideo && <button onClick={toggleVideo} style={callStyles.controlBtn}>{isVideoOff ? '📹❌' : '📹'}</button>}
+          <button onClick={endCall} style={{...callStyles.controlBtn, ...callStyles.endBtn}}>📞</button>
         </div>
       </div>
     </div>
   );
+};
+
+const callStyles = {
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', zIndex: 10000 },
+  container: { width: '100%', height: '100%', position: 'relative' },
+  remoteContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  remoteVideo: { width: '100%', height: '100%', objectFit: 'cover' },
+  localContainer: { position: 'absolute', bottom: 80, right: 20, width: 100, height: 150, borderRadius: 12, overflow: 'hidden', border: '2px solid white' },
+  localVideo: { width: '100%', height: '100%', objectFit: 'cover' },
+  audioContainer: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' },
+  audioAvatar: { width: 120, height: 120, borderRadius: 60, overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  audioAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  audioAvatarEmoji: { fontSize: 60 },
+  audioName: { color: 'white', fontSize: 24, fontWeight: 'bold' },
+  callingText: { position: 'absolute', bottom: 140, left: 0, right: 0, textAlign: 'center', color: 'white', fontSize: 16, background: 'rgba(0,0,0,0.5)', padding: 10 },
+  controls: { position: 'absolute', bottom: 30, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20 },
+  controlBtn: { width: 60, height: 60, borderRadius: 30, background: 'rgba(255,255,255,0.2)', border: 'none', fontSize: 24, cursor: 'pointer' },
+  endBtn: { background: '#FF4D6D' },
 };
 
 export default function App() {
@@ -74,13 +102,14 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [showSignup, setShowSignup] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showVideoCall, setShowVideoCall] = useState(false);
-  const [callTarget, setCallTarget] = useState(null);
   const [activeTab, setActiveTab] = useState('discover');
   const [activeChat, setActiveChat] = useState(null);
   const [inputText, setInputText] = useState('');
+  const [showCall, setShowCall] = useState(false);
+  const [callTarget, setCallTarget] = useState(null);
+  const [isVideoCall, setIsVideoCall] = useState(true);
   
-  // Easter egg state
+  // Easter egg
   const [showNumberPad, setShowNumberPad] = useState(false);
   const [secretCode, setSecretCode] = useState('');
   const [showToilet, setShowToilet] = useState(false);
@@ -112,7 +141,7 @@ export default function App() {
   }, [allUsers]);
 
   const userData = currentUser ? allUsers[currentUser.email] : null;
-  const myFriends = userData?.friends || [];
+  const friends = userData?.friends || [];
   const incomingRequests = userData?.incomingRequests || [];
   const sentRequests = userData?.sentRequests || [];
 
@@ -146,6 +175,80 @@ export default function App() {
     setSecretCode('');
   };
 
+  // Friend functions
+  const sendFriendRequest = (targetEmail) => {
+    const targetUser = allUsers[targetEmail];
+    if (!targetUser) return;
+    if (friends.includes(targetEmail)) { alert(`You're already friends with ${targetUser.name}!`); return; }
+    if (sentRequests.includes(targetEmail)) { alert(`Friend request already sent to ${targetUser.name}!`); return; }
+    
+    updateMyData({ sentRequests: [...sentRequests, targetEmail] });
+    setAllUsers(prev => ({
+      ...prev,
+      [targetEmail]: {
+        ...prev[targetEmail],
+        incomingRequests: [...(prev[targetEmail].incomingRequests || []), currentUser.email]
+      }
+    }));
+    alert(`✨ Friend request sent to ${targetUser.name}!`);
+  };
+
+  const acceptFriendRequest = (fromEmail) => {
+    const fromUser = allUsers[fromEmail];
+    updateMyData({
+      friends: [...friends, fromEmail],
+      incomingRequests: incomingRequests.filter(email => email !== fromEmail)
+    });
+    setAllUsers(prev => ({
+      ...prev,
+      [fromEmail]: {
+        ...prev[fromEmail],
+        friends: [...(prev[fromEmail].friends || []), currentUser.email],
+        sentRequests: (prev[fromEmail].sentRequests || []).filter(email => email !== currentUser.email)
+      }
+    }));
+    alert(`🎉 You're now friends with ${fromUser.name}!`);
+  };
+
+  const declineFriendRequest = (fromEmail) => {
+    updateMyData({ incomingRequests: incomingRequests.filter(email => email !== fromEmail) });
+    setAllUsers(prev => ({
+      ...prev,
+      [fromEmail]: {
+        ...prev[fromEmail],
+        sentRequests: (prev[fromEmail].sentRequests || []).filter(email => email !== currentUser.email)
+      }
+    }));
+  };
+
+  const removeFriend = (friendEmail) => {
+    if (confirm('Remove this friend?')) {
+      updateMyData({ friends: friends.filter(f => f !== friendEmail) });
+      setAllUsers(prev => ({
+        ...prev,
+        [friendEmail]: {
+          ...prev[friendEmail],
+          friends: (prev[friendEmail].friends || []).filter(f => f !== currentUser.email)
+        }
+      }));
+    }
+  };
+
+  const updateMyData = (updates) => {
+    setAllUsers(prev => ({ ...prev, [currentUser.email]: { ...prev[currentUser.email], ...updates } }));
+  };
+
+  // Chat functions
+  const sendMessage = (friendEmail, text) => {
+    if (!text.trim()) return;
+    const messages = userData?.messages?.[friendEmail] || [];
+    updateMyData({
+      messages: { ...userData?.messages, [friendEmail]: [...messages, { from: 'me', text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] }
+    });
+    setInputText('');
+  };
+
+  // Auth functions
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
@@ -177,82 +280,10 @@ export default function App() {
       location: location || "Unknown",
       sexuality: sexuality || "Prefer not to say",
       friends: [], incomingRequests: [], sentRequests: [], messages: {},
-      loginMethod: 'email'
     };
     setAllUsers({ ...allUsers, [email]: newUser });
     setCurrentUser({ email, name });
     setLoggedIn(true);
-  };
-
-  const sendInvite = (targetEmail) => {
-    const targetUser = allUsers[targetEmail];
-    if (!targetUser) return;
-    if (myFriends.includes(targetEmail)) { alert(`You're already connected with ${targetUser.name}!`); return; }
-    if (sentRequests.includes(targetEmail)) { alert(`Invite already sent to ${targetUser.name}!`); return; }
-    
-    updateMyData({ sentRequests: [...sentRequests, targetEmail] });
-    setAllUsers(prev => ({
-      ...prev,
-      [targetEmail]: {
-        ...prev[targetEmail],
-        incomingRequests: [...(prev[targetEmail].incomingRequests || []), currentUser.email]
-      }
-    }));
-    alert(`✨ Invite sent to ${targetUser.name}!`);
-  };
-
-  const acceptInvite = (fromEmail) => {
-    const fromUser = allUsers[fromEmail];
-    updateMyData({
-      friends: [...myFriends, fromEmail],
-      incomingRequests: incomingRequests.filter(email => email !== fromEmail)
-    });
-    setAllUsers(prev => ({
-      ...prev,
-      [fromEmail]: {
-        ...prev[fromEmail],
-        friends: [...(prev[fromEmail].friends || []), currentUser.email],
-        sentRequests: (prev[fromEmail].sentRequests || []).filter(email => email !== currentUser.email)
-      }
-    }));
-    alert(`🎉 You're now connected with ${fromUser.name}!`);
-  };
-
-  const declineInvite = (fromEmail) => {
-    updateMyData({ incomingRequests: incomingRequests.filter(email => email !== fromEmail) });
-    setAllUsers(prev => ({
-      ...prev,
-      [fromEmail]: {
-        ...prev[fromEmail],
-        sentRequests: (prev[fromEmail].sentRequests || []).filter(email => email !== currentUser.email)
-      }
-    }));
-  };
-
-  const removeFriend = (friendEmail) => {
-    if (confirm('Remove this connection?')) {
-      updateMyData({ friends: myFriends.filter(f => f !== friendEmail) });
-      setAllUsers(prev => ({
-        ...prev,
-        [friendEmail]: {
-          ...prev[friendEmail],
-          friends: (prev[friendEmail].friends || []).filter(f => f !== currentUser.email)
-        }
-      }));
-    }
-  };
-
-  const updateMyData = (updates) => {
-    setAllUsers(prev => ({ ...prev, [currentUser.email]: { ...prev[currentUser.email], ...updates } }));
-  };
-
-  const sendMessage = (friendEmail, text) => {
-    if (!text.trim()) return;
-    const msgs = userData?.messages?.[friendEmail] || [];
-    updateMyData({
-      messages: { ...userData?.messages, [friendEmail]: [...msgs, { from: 'me', text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] }
-    });
-    setInputText('');
   };
 
   const deleteAccount = () => {
@@ -265,7 +296,7 @@ export default function App() {
     }
   };
 
-  // Logo Component with easter egg
+  // Logo component
   const Logo = () => (
     <div onClick={handleLogoClick} style={{ cursor: 'pointer', marginBottom: 16 }}>
       <div style={{ fontSize: 64 }}>🔗✨</div>
@@ -280,7 +311,7 @@ export default function App() {
     </div>
   );
 
-  // Loading Screen
+  // Loading screen
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -290,9 +321,9 @@ export default function App() {
     );
   }
 
-  // Chat Screen
+  // Chat screen
   if (activeChat) {
-    const msgs = userData?.messages?.[activeChat.email] || [];
+    const messages = userData?.messages?.[activeChat.email] || [];
     return (
       <>
         <div style={styles.chatContainer}>
@@ -308,18 +339,18 @@ export default function App() {
               </div>
             </div>
             <div style={styles.chatActions}>
-              <button onClick={() => { setCallTarget(activeChat); setShowVideoCall(true); }} style={styles.callBtn}>📹</button>
-              <button onClick={() => { setCallTarget(activeChat); setShowVideoCall(true); }} style={styles.callBtn}>📞</button>
+              <button onClick={() => { setCallTarget(activeChat); setIsVideoCall(true); setShowCall(true); }} style={styles.callBtn}>📹</button>
+              <button onClick={() => { setCallTarget(activeChat); setIsVideoCall(false); setShowCall(true); }} style={styles.callBtn}>📞</button>
             </div>
           </div>
           <div style={styles.chatMessagesArea}>
-            {msgs.length === 0 && (
+            {messages.length === 0 && (
               <div style={styles.emptyChat}>
                 <span style={styles.emptyChatEmoji}>💬</span>
                 <p>Send a message to start the conversation!</p>
               </div>
             )}
-            {msgs.map((msg, i) => (
+            {messages.map((msg, i) => (
               <div key={i} style={{...styles.chatMsg, justifyContent: msg.from === 'me' ? 'flex-end' : 'flex-start'}}>
                 <div style={{...styles.chatBubble, background: msg.from === 'me' ? '#FF4D6D' : '#f0f0f0', color: msg.from === 'me' ? 'white' : '#333'}}>
                   {msg.text}
@@ -333,12 +364,12 @@ export default function App() {
             <button style={styles.sendMsgBtn} onClick={() => sendMessage(activeChat.email, inputText)}>Send</button>
           </div>
         </div>
-        <VideoCallModal isOpen={showVideoCall} onClose={() => setShowVideoCall(false)} targetUser={callTarget} currentUser={currentUser} />
+        <CallModal isOpen={showCall} onClose={() => setShowCall(false)} targetUser={callTarget} currentUser={currentUser} isVideo={isVideoCall} />
       </>
     );
   }
 
-  // Login/Signup Screen
+  // Login/Signup screen
   if (!loggedIn) {
     return (
       <div style={styles.authContainer}>
@@ -394,7 +425,7 @@ export default function App() {
           </div>
         )}
         
-        {/* Easter Egg Toilet Message */}
+        {/* Easter Egg Toilet */}
         {showToilet && (
           <div style={styles.modalOverlay}>
             <div style={styles.toiletModal}>
@@ -409,14 +440,13 @@ export default function App() {
   }
 
   // Main App
-  const hasPendingRequests = incomingRequests?.length > 0;
-  const visibleUsers = otherUsers.filter(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email));
+  const visibleUsers = otherUsers.filter(u => !friends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email));
 
   return (
     <>
       <div style={styles.mainContainer}>
         <div style={styles.mainCard}>
-          {/* Header with Small Logo */}
+          {/* Header */}
           <div style={styles.mainHeader}>
             <SmallLogo />
             <div style={styles.mainActions}>
@@ -440,44 +470,42 @@ export default function App() {
           {/* Tabs */}
           <div style={styles.tabBar}>
             <button onClick={() => setActiveTab('discover')} style={{...styles.tab, background: activeTab === 'discover' ? '#FF4D6D' : '#f0f0f0', color: activeTab === 'discover' ? 'white' : '#666'}}>✨ Discover</button>
-            <button onClick={() => setActiveTab('connections')} style={{...styles.tab, background: activeTab === 'connections' ? '#FF4D6D' : '#f0f0f0', color: activeTab === 'connections' ? 'white' : '#666'}}>
-              👥 Connections ({myFriends?.length || 0})
-              {hasPendingRequests && <span style={styles.tabBadge}>!</span>}
+            <button onClick={() => setActiveTab('friends')} style={{...styles.tab, background: activeTab === 'friends' ? '#FF4D6D' : '#f0f0f0', color: activeTab === 'friends' ? 'white' : '#666'}}>
+              👥 Friends ({friends.length})
+              {incomingRequests.length > 0 && <span style={styles.tabBadge}>!</span>}
             </button>
           </div>
 
-          {/* Discover View */}
+          {/* Discover Tab */}
           {activeTab === 'discover' && (
-            <div style={styles.discoverContainer}>
+            <div>
               {visibleUsers.length === 0 ? (
                 <div style={styles.emptyState}>
                   <span style={styles.emptyEmoji}>🎉</span>
                   <h3>No more profiles!</h3>
-                  <p>Check your connections or come back later</p>
+                  <p>Check your friends or come back later</p>
                 </div>
               ) : (
-                <>
-                  <div style={styles.profileCard}>
-                    <div style={styles.profileCardAvatar}>
-                      {visibleUsers[0]?.profileImage ? <img src={visibleUsers[0].profileImage} alt="" style={styles.profileCardAvatarImg} /> : <span style={styles.profileCardAvatarEmoji}>😊</span>}
-                    </div>
-                    <h2 style={styles.profileCardName}>{visibleUsers[0]?.name}, {visibleUsers[0]?.age}</h2>
-                    <p style={styles.profileCardVibe}>{visibleUsers[0]?.vibe}</p>
-                    <p style={styles.profileCardBio}>"{visibleUsers[0]?.bio}"</p>
-                    <button onClick={() => sendInvite(visibleUsers[0].email)} style={styles.inviteBtn}>🤝 Send Invite</button>
+                <div style={styles.profileCard}>
+                  <div style={styles.profileCardAvatar}>
+                    {visibleUsers[0]?.profileImage ? <img src={visibleUsers[0].profileImage} alt="" style={styles.profileCardAvatarImg} /> : <span style={styles.profileCardAvatarEmoji}>😊</span>}
                   </div>
-                </>
+                  <h2 style={styles.profileCardName}>{visibleUsers[0]?.name}, {visibleUsers[0]?.age}</h2>
+                  <p style={styles.profileCardVibe}>{visibleUsers[0]?.vibe}</p>
+                  <p style={styles.profileCardBio}>"{visibleUsers[0]?.bio}"</p>
+                  <button onClick={() => sendFriendRequest(visibleUsers[0].email)} style={styles.addFriendBtn}>➕ Add Friend</button>
+                </div>
               )}
             </div>
           )}
 
-          {/* Connections View */}
-          {activeTab === 'connections' && (
-            <div style={styles.connectionsContainer}>
+          {/* Friends Tab */}
+          {activeTab === 'friends' && (
+            <div>
               {/* Incoming Requests */}
-              {incomingRequests?.length > 0 && (
+              {incomingRequests.length > 0 && (
                 <div style={styles.section}>
-                  <h3 style={styles.sectionTitle}>✨ Invites ({incomingRequests.length})</h3>
+                  <h3 style={styles.sectionTitle}>✨ Friend Requests ({incomingRequests.length})</h3>
                   {incomingRequests.map(email => {
                     const user = allUsers[email];
                     if (!user) return null;
@@ -491,8 +519,8 @@ export default function App() {
                           <div style={styles.requestBio}>{user.vibe}</div>
                         </div>
                         <div style={styles.requestActions}>
-                          <button onClick={() => acceptInvite(email)} style={styles.acceptBtn}>Accept</button>
-                          <button onClick={() => declineInvite(email)} style={styles.declineBtn}>Decline</button>
+                          <button onClick={() => acceptFriendRequest(email)} style={styles.acceptBtn}>Accept</button>
+                          <button onClick={() => declineFriendRequest(email)} style={styles.declineBtn}>Decline</button>
                         </div>
                       </div>
                     );
@@ -500,31 +528,31 @@ export default function App() {
                 </div>
               )}
 
-              {/* Your Connections */}
+              {/* Your Friends */}
               <div style={styles.section}>
-                <h3 style={styles.sectionTitle}>👥 Your Connections ({myFriends?.length || 0})</h3>
-                {myFriends?.length === 0 ? (
-                  <div style={styles.emptyConnections}>
+                <h3 style={styles.sectionTitle}>👥 Your Friends ({friends.length})</h3>
+                {friends.length === 0 ? (
+                  <div style={styles.emptyFriends}>
                     <span style={styles.emptyEmoji}>🤝</span>
-                    <p>No connections yet. Send some invites!</p>
+                    <p>No friends yet. Send some friend requests!</p>
                   </div>
                 ) : (
-                  myFriends.map(email => {
+                  friends.map(email => {
                     const user = allUsers[email];
                     if (!user) return null;
                     return (
-                      <div key={email} style={styles.connectionCard}>
-                        <div style={styles.connectionAvatar}>
-                          {user.profileImage ? <img src={user.profileImage} alt="" style={styles.connectionAvatarImg} /> : <span style={styles.connectionAvatarEmoji}>😊</span>}
+                      <div key={email} style={styles.friendCard}>
+                        <div style={styles.friendAvatar}>
+                          {user.profileImage ? <img src={user.profileImage} alt="" style={styles.friendAvatarImg} /> : <span style={styles.friendAvatarEmoji}>😊</span>}
                         </div>
-                        <div style={styles.connectionInfo}>
-                          <div style={styles.connectionName}>{user.name}, {user.age}</div>
-                          <div style={styles.connectionLocation}>📍 {user.location}</div>
+                        <div style={styles.friendInfo}>
+                          <div style={styles.friendName}>{user.name}, {user.age}</div>
+                          <div style={styles.friendLocation}>📍 {user.location}</div>
                         </div>
-                        <div style={styles.connectionActions}>
-                          <button onClick={() => setActiveChat(user)} style={styles.chatConnBtn}>💬 Chat</button>
-                          <button onClick={() => { setCallTarget(user); setShowVideoCall(true); }} style={styles.callConnBtn}>📞</button>
-                          <button onClick={() => removeFriend(email)} style={styles.removeConnBtn}>✕</button>
+                        <div style={styles.friendActions}>
+                          <button onClick={() => setActiveChat(user)} style={styles.chatFriendBtn}>💬 Chat</button>
+                          <button onClick={() => { setCallTarget(user); setIsVideoCall(true); setShowCall(true); }} style={styles.callFriendBtn}>📹</button>
+                          <button onClick={() => removeFriend(email)} style={styles.removeFriendBtn}>✕</button>
                         </div>
                       </div>
                     );
@@ -533,10 +561,10 @@ export default function App() {
               </div>
 
               {/* Sent Requests */}
-              {sentRequests?.filter(email => !myFriends.includes(email)).length > 0 && (
+              {sentRequests.filter(email => !friends.includes(email)).length > 0 && (
                 <div style={styles.section}>
-                  <h3 style={styles.sectionTitle}>📤 Sent Invites</h3>
-                  {sentRequests.filter(email => !myFriends.includes(email)).map(email => {
+                  <h3 style={styles.sectionTitle}>📤 Sent Requests</h3>
+                  {sentRequests.filter(email => !friends.includes(email)).map(email => {
                     const user = allUsers[email];
                     if (!user) return null;
                     return (
@@ -563,7 +591,7 @@ export default function App() {
         <div style={styles.modalOverlay} onClick={() => setShowSettings(false)}>
           <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={{ color: '#333' }}>Settings</h2>
+              <h2>Settings</h2>
               <button onClick={() => setShowSettings(false)} style={styles.modalClose}>✕</button>
             </div>
             <div style={styles.modalContent}>
@@ -578,8 +606,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Video Call Modal */}
-      <VideoCallModal isOpen={showVideoCall} onClose={() => setShowVideoCall(false)} targetUser={callTarget} currentUser={currentUser} />
+      {/* Call Modal */}
+      <CallModal isOpen={showCall} onClose={() => setShowCall(false)} targetUser={callTarget} currentUser={currentUser} isVideo={isVideoCall} />
     </>
   );
 }
@@ -600,23 +628,23 @@ const styles = {
   imageUploadArea: { marginBottom: 12 },
   imageUploadBtn: { width: '100%', padding: 12, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 28, fontSize: 12, cursor: 'pointer', color: '#666' },
   
-  // Easter Egg styles
+  // Easter Egg
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 },
   easterModal: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '32px 28px', textAlign: 'center', width: 280, border: '0.5px solid rgba(255,255,255,0.1)' },
-  modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 24 },
+  modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, marginBottom: 24 },
   secretCodeDisplay: { display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 28 },
   codeDot: { fontSize: 24, color: '#FF4D6D' },
   codeDotEmpty: { fontSize: 24, color: 'rgba(255,255,255,0.2)' },
   numberPad: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 },
-  numBtn: { background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)', padding: '14px', borderRadius: 40, color: 'white', fontSize: 20, cursor: 'pointer', fontFamily: 'monospace' },
-  toiletModal: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '40px 32px', textAlign: 'center', width: 280, border: '0.5px solid rgba(255,255,255,0.1)' },
+  numBtn: { background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)', padding: '14px', borderRadius: 40, color: 'white', fontSize: 20, cursor: 'pointer' },
+  toiletModal: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '40px 32px', textAlign: 'center', width: 280 },
   toiletEmoji: { fontSize: 64, marginBottom: 20, cursor: 'pointer' },
   toiletMessage: { color: 'rgba(255,255,255,0.85)', fontSize: 15, marginBottom: 28 },
   closeBtn: { background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', padding: '10px 24px', borderRadius: 30, color: 'rgba(255,255,255,0.6)', cursor: 'pointer', width: '100%' },
   
   // Main App
   mainContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  mainCard: { background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', borderRadius: 48, padding: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 45px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' },
+  mainCard: { background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', borderRadius: 48, padding: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 45px rgba(0,0,0,0.3)' },
   mainHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   mainActions: { display: 'flex', gap: 10 },
   iconBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', fontSize: 16 },
@@ -635,7 +663,6 @@ const styles = {
   tab: { flex: 1, padding: '12px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 14, position: 'relative' },
   tabBadge: { position: 'absolute', top: -5, right: 5, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 6px', fontSize: 10 },
   
-  discoverContainer: { animation: 'fadeIn 0.5s' },
   profileCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: 48, padding: 32, textAlign: 'center', marginBottom: 20 },
   profileCardAvatar: { width: 140, height: 140, borderRadius: 70, margin: '0 auto 16px', overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   profileCardAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
@@ -643,11 +670,11 @@ const styles = {
   profileCardName: { fontSize: 28, fontWeight: 'bold', color: 'white', marginBottom: 4 },
   profileCardVibe: { color: '#FF4D6D', fontWeight: 'bold', fontSize: 14, marginBottom: 8 },
   profileCardBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic', marginBottom: 20 },
-  inviteBtn: { background: 'linear-gradient(135deg, #4CAF50, #45a049)', color: 'white', border: 'none', padding: '14px 32px', borderRadius: 50, fontSize: 16, fontWeight: 'bold', cursor: 'pointer', width: '100%' },
+  addFriendBtn: { background: 'linear-gradient(135deg, #4CAF50, #45a049)', color: 'white', border: 'none', padding: '14px 32px', borderRadius: 50, fontSize: 16, fontWeight: 'bold', cursor: 'pointer', width: '100%' },
   
-  connectionsContainer: { animation: 'fadeIn 0.5s' },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: 'rgba(255,255,255,0.7)', marginBottom: 12 },
+  
   requestCard: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 24, marginBottom: 8 },
   requestAvatar: { width: 50, height: 50, borderRadius: 25, overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   requestAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
@@ -659,17 +686,17 @@ const styles = {
   acceptBtn: { background: '#10b981', color: 'white', border: 'none', padding: '6px 14px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
   declineBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '6px 14px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
   
-  connectionCard: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 24, marginBottom: 8 },
-  connectionAvatar: { width: 50, height: 50, borderRadius: 25, overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  connectionAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  connectionAvatarEmoji: { fontSize: 28 },
-  connectionInfo: { flex: 1 },
-  connectionName: { color: 'white', fontWeight: 'bold', fontSize: 15 },
-  connectionLocation: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
-  connectionActions: { display: 'flex', gap: 6 },
-  chatConnBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 14 },
-  callConnBtn: { background: '#4CAF50', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 14 },
-  removeConnBtn: { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
+  friendCard: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 24, marginBottom: 8 },
+  friendAvatar: { width: 50, height: 50, borderRadius: 25, overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  friendAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  friendAvatarEmoji: { fontSize: 28 },
+  friendInfo: { flex: 1 },
+  friendName: { color: 'white', fontWeight: 'bold', fontSize: 15 },
+  friendLocation: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
+  friendActions: { display: 'flex', gap: 6 },
+  chatFriendBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 14 },
+  callFriendBtn: { background: '#4CAF50', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 14 },
+  removeFriendBtn: { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
   
   sentCard: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 24, marginBottom: 8, opacity: 0.7 },
   sentAvatar: { width: 50, height: 50, borderRadius: 25, overflow: 'hidden', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
@@ -680,7 +707,7 @@ const styles = {
   sentStatus: { color: '#FFA500', fontSize: 11 },
   
   emptyState: { textAlign: 'center', padding: 40 },
-  emptyConnections: { textAlign: 'center', padding: 30, background: 'rgba(255,255,255,0.03)', borderRadius: 32 },
+  emptyFriends: { textAlign: 'center', padding: 30, background: 'rgba(255,255,255,0.03)', borderRadius: 32 },
   emptyEmoji: { fontSize: 60, marginBottom: 16, display: 'block' },
   
   // Chat
@@ -704,18 +731,6 @@ const styles = {
   chatInputArea: { display: 'flex', gap: 10, padding: 16, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' },
   chatInput: { flex: 1, padding: 14, borderRadius: 40, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: 14, outline: 'none' },
   sendMsgBtn: { background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: 'bold' },
-  
-  // Call
-  callOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', zIndex: 2000 },
-  callContainer: { width: '100%', height: '100%', position: 'relative' },
-  remoteVideoContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  remoteVideo: { width: '100%', height: '100%', objectFit: 'cover' },
-  callingText: { position: 'absolute', bottom: 100, left: 0, right: 0, textAlign: 'center', color: 'white', fontSize: 16, background: 'rgba(0,0,0,0.5)', padding: 10 },
-  localVideoContainer: { position: 'absolute', bottom: 80, right: 20, width: 100, height: 150, borderRadius: 12, overflow: 'hidden', border: '2px solid white' },
-  localVideo: { width: '100%', height: '100%', objectFit: 'cover' },
-  callControls: { position: 'absolute', bottom: 20, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20, padding: 20 },
-  callControlBtn: { width: 60, height: 60, borderRadius: 30, background: 'rgba(255,255,255,0.2)', border: 'none', fontSize: 24, cursor: 'pointer' },
-  endCallBtn: { background: '#FF4D6D' },
   
   // Settings Modal
   modalCard: { background: 'white', borderRadius: 32, width: '90%', maxWidth: 400, overflow: 'hidden' },
