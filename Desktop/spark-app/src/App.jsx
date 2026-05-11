@@ -197,10 +197,12 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [showDuos, setShowDuos] = useState(false);
   const [callTarget, setCallTarget] = useState(null);
   const [signupStep, setSignupStep] = useState(1);
   const [isCompletingProfile, setIsCompletingProfile] = useState(false);
   const [pendingGoogleUser, setPendingGoogleUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('swipe'); // 'swipe', 'matches', 'duos'
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -268,6 +270,11 @@ export default function App() {
   const myPasses = userData?.passes || [];
   const mutualMatches = myLikes.filter(id => likedBy.includes(id));
   
+  // Run Duos (Friend Request) System
+  const myFriends = userData?.friends || [];
+  const sentRequests = userData?.sentRequests || [];
+  const receivedRequests = userData?.receivedRequests || [];
+  
   const getAvailableCountries = () => {
     if (!continent || !WORLD_DATA[continent]) return [];
     return Object.keys(WORLD_DATA[continent].countries);
@@ -289,6 +296,110 @@ export default function App() {
     if (filterSexuality && user.sexuality !== filterSexuality) return false;
     return true;
   });
+
+  // Get pending received requests
+  const pendingRequests = receivedRequests?.filter(req => req.status === 'pending') || [];
+  
+  // Get sent pending requests
+  const pendingSentRequests = sentRequests?.filter(req => req.status === 'pending') || [];
+
+  // Send a duo request (friend request)
+  const sendDuoRequest = (targetEmail) => {
+    const targetUser = allUsers[targetEmail];
+    if (!targetUser) return;
+    
+    // Check if already friends
+    if (myFriends.includes(targetEmail)) {
+      alert(`You're already in a duo with ${targetUser.name}!`);
+      return;
+    }
+    
+    // Check if request already sent
+    if (sentRequests?.some(req => req.targetEmail === targetEmail && req.status === 'pending')) {
+      alert(`Duo request already sent to ${targetUser.name}!`);
+      return;
+    }
+    
+    const newRequest = {
+      fromEmail: currentUser.email,
+      fromName: userData.name,
+      fromPhoto: userData.profileImage || userData.profilePhoto,
+      targetEmail: targetEmail,
+      targetName: targetUser.name,
+      status: 'pending',
+      timestamp: Date.now()
+    };
+    
+    // Add to sender's sent requests
+    updateMyData({
+      sentRequests: [...(sentRequests || []), newRequest]
+    });
+    
+    // Add to receiver's received requests
+    setAllUsers(prev => ({
+      ...prev,
+      [targetEmail]: {
+        ...prev[targetEmail],
+        receivedRequests: [...(prev[targetEmail].receivedRequests || []), newRequest]
+      }
+    }));
+    
+    alert(`Duo request sent to ${targetUser.name}!`);
+  };
+  
+  // Accept a duo request
+  const acceptDuoRequest = (request) => {
+    // Add to friends list
+    updateMyData({
+      friends: [...(myFriends || []), request.fromEmail],
+      receivedRequests: (receivedRequests || []).filter(r => r.fromEmail !== request.fromEmail)
+    });
+    
+    // Update sender's sent request and add to their friends
+    setAllUsers(prev => ({
+      ...prev,
+      [request.fromEmail]: {
+        ...prev[request.fromEmail],
+        friends: [...(prev[request.fromEmail].friends || []), currentUser.email],
+        sentRequests: (prev[request.fromEmail].sentRequests || []).filter(r => r.targetEmail !== currentUser.email)
+      }
+    }));
+    
+    alert(`You're now in a duo with ${request.fromName}! 🎉`);
+  };
+  
+  // Decline a duo request
+  const declineDuoRequest = (request) => {
+    updateMyData({
+      receivedRequests: (receivedRequests || []).filter(r => r.fromEmail !== request.fromEmail)
+    });
+    
+    // Update sender
+    setAllUsers(prev => ({
+      ...prev,
+      [request.fromEmail]: {
+        ...prev[request.fromEmail],
+        sentRequests: (prev[request.fromEmail].sentRequests || []).filter(r => r.targetEmail !== currentUser.email)
+      }
+    }));
+  };
+  
+  // Remove a duo friend
+  const removeDuoFriend = (friendEmail) => {
+    if (confirm('Remove this person from your duos?')) {
+      updateMyData({
+        friends: (myFriends || []).filter(f => f !== friendEmail)
+      });
+      
+      setAllUsers(prev => ({
+        ...prev,
+        [friendEmail]: {
+          ...prev[friendEmail],
+          friends: (prev[friendEmail].friends || []).filter(f => f !== currentUser.email)
+        }
+      }));
+    }
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -328,6 +439,7 @@ export default function App() {
       location: `${continent} · ${country} · ${city}`,
       sexuality: sexuality,
       matches: [], likes: [], likedBy: [], passes: [], messages: {},
+      friends: [], sentRequests: [], receivedRequests: [],
       loginMethod: 'email'
     };
     setAllUsers({ ...allUsers, [email]: newUser });
@@ -352,6 +464,7 @@ export default function App() {
       location: `${continent} · ${country} · ${city}`,
       sexuality: sexuality,
       matches: [], likes: [], likedBy: [], passes: [], messages: {},
+      friends: [], sentRequests: [], receivedRequests: [],
     };
     setAllUsers({ ...allUsers, [pendingGoogleUser.email]: newUser });
     setCurrentUser({ email: pendingGoogleUser.email, name: newUser.name });
@@ -421,6 +534,7 @@ export default function App() {
     setShowSettings(false);
     setShowFilters(false);
     setShowVideoCall(false);
+    setShowDuos(false);
   };
 
   const updateMyData = (updates) => {
@@ -764,6 +878,7 @@ export default function App() {
   // Main App
   const currentProfile = filteredOtherUsers[0];
   const hasNewLikes = likedBy.length > 0 && !likedBy.some(email => myLikes.includes(email));
+  const hasPendingRequests = pendingRequests.length > 0;
   const activeFilterCount = (filterContinent ? 1 : 0) + (filterCountry ? 1 : 0) + (filterCity ? 1 : 0) + (filterMinAge !== 18 ? 1 : 0) + (filterMaxAge !== 35 ? 1 : 0) + (filterSexuality ? 1 : 0);
 
   return (
@@ -779,11 +894,24 @@ export default function App() {
             </div>
           </div>
           <div style={styles.userLocation}>{userData?.location && <span>📍 {userData.location}</span>}{userData?.sexuality && <span style={styles.userSexuality}> · {userData.sexuality}</span>}</div>
+          
+          {/* New Tab Bar with Duos */}
           <div style={styles.tabs}>
-            <button onClick={() => setView('swipe')} style={{...styles.tab, background: view === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>🔍 Swipe</button>
-            <button onClick={() => setView('matches')} style={{...styles.tab, background: view === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: view === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}>💬 Matches ({mutualMatches.length}){hasNewLikes && <span style={styles.newBadge}>!</span>}</button>
+            <button onClick={() => setActiveTab('swipe')} style={{...styles.tab, background: activeTab === 'swipe' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: activeTab === 'swipe' ? 'white' : 'rgba(255,255,255,0.7)'}}>
+              🔍 Swipe
+            </button>
+            <button onClick={() => setActiveTab('matches')} style={{...styles.tab, background: activeTab === 'matches' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: activeTab === 'matches' ? 'white' : 'rgba(255,255,255,0.7)'}}>
+              💬 Matches ({mutualMatches.length})
+              {hasNewLikes && <span style={styles.newBadge}>!</span>}
+            </button>
+            <button onClick={() => setActiveTab('duos')} style={{...styles.tab, background: activeTab === 'duos' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: activeTab === 'duos' ? 'white' : 'rgba(255,255,255,0.7)'}}>
+              👥 Duos ({myFriends?.length || 0})
+              {hasPendingRequests && <span style={styles.newBadge}>!</span>}
+            </button>
           </div>
-          {view === 'swipe' && (
+          
+          {/* Swipe View */}
+          {activeTab === 'swipe' && (
             <>
               {filteredOtherUsers.length === 0 ? (
                 <div style={styles.emptyState}><div style={styles.emptyEmoji}>🎉</div><h3>No more profiles!</h3><button onClick={() => setShowFilters(true)} style={styles.resetBtn}>Adjust Filters →</button></div>
@@ -809,12 +937,20 @@ export default function App() {
                 <button onClick={() => currentProfile && handlePass(currentProfile.email)} style={styles.nopeCircle}>✕</button>
                 <button onClick={() => currentProfile && handleLike(currentProfile.email)} style={styles.likeCircle}>♥</button>
               </div>
+              {currentProfile && !myFriends?.includes(currentProfile.email) && !sentRequests?.some(r => r.targetEmail === currentProfile.email) && (
+                <button onClick={() => sendDuoRequest(currentProfile.email)} style={styles.duoButton}>🤝 Run duos?</button>
+              )}
+              {currentProfile && sentRequests?.some(r => r.targetEmail === currentProfile.email) && (
+                <div style={styles.requestSentMsg}>🤝 Duo request sent! Waiting for response...</div>
+              )}
             </>
           )}
-          {view === 'matches' && (
+          
+          {/* Matches View */}
+          {activeTab === 'matches' && (
             <>
               {mutualMatches.length === 0 && likedBy.filter(email => !myLikes.includes(email)).length === 0 ? (
-                <div style={styles.emptyState}><div style={styles.emptyEmoji}>💔</div><h3>No matches yet</h3><button onClick={() => setView('swipe')} style={styles.resetBtn}>Start Swiping →</button></div>
+                <div style={styles.emptyState}><div style={styles.emptyEmoji}>💔</div><h3>No matches yet</h3><button onClick={() => setActiveTab('swipe')} style={styles.resetBtn}>Start Swiping →</button></div>
               ) : (
                 <>
                   {likedBy.filter(email => !myLikes.includes(email)).length > 0 && (
@@ -852,6 +988,84 @@ export default function App() {
                 </>
               )}
             </>
+          )}
+          
+          {/* Duos View - Friend Requests */}
+          {activeTab === 'duos' && (
+            <div style={styles.duosContainer}>
+              {/* Pending Requests Received */}
+              {pendingRequests.length > 0 && (
+                <div style={styles.section}>
+                  <p style={styles.sectionTitle}>🤝 Duo Requests ({pendingRequests.length})</p>
+                  {pendingRequests.map((req, idx) => {
+                    const user = allUsers[req.fromEmail];
+                    if (!user) return null;
+                    return (
+                      <div key={idx} style={styles.requestItem}>
+                        {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.requestImage} /> : <div style={styles.requestEmoji}>{user.profilePhoto || "😊"}</div>}
+                        <div style={styles.requestInfo}>
+                          <div style={styles.requestName}>{user.name}, {user.age}</div>
+                          <div style={styles.requestVibe}>{user.vibe}</div>
+                        </div>
+                        <div style={styles.requestActions}>
+                          <button onClick={() => acceptDuoRequest(req)} style={styles.acceptBtn}>✓ Accept</button>
+                          <button onClick={() => declineDuoRequest(req)} style={styles.declineBtn}>✗ Decline</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* Your Duos (Friends) */}
+              <div style={styles.section}>
+                <p style={styles.sectionTitle}>👥 Your Duos ({myFriends?.length || 0})</p>
+                {myFriends?.length === 0 ? (
+                  <div style={styles.emptyDuos}>
+                    <div style={styles.emptyEmoji}>🤝</div>
+                    <p>No duos yet! Send a "Run duos?" request to someone you like.</p>
+                  </div>
+                ) : (
+                  myFriends.map(email => {
+                    const user = allUsers[email];
+                    if (!user) return null;
+                    return (
+                      <div key={email} style={styles.friendItem}>
+                        {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.friendImage} /> : <div style={styles.friendEmoji}>{user.profilePhoto || "😊"}</div>}
+                        <div style={styles.friendInfo}>
+                          <div style={styles.friendName}>{user.name}, {user.age}</div>
+                          <div style={styles.friendLocation}>📍 {user.location || 'Unknown location'}</div>
+                        </div>
+                        <div style={styles.friendActions}>
+                          <button onClick={() => setActiveChat(user)} style={styles.friendChatBtn}>💬 Chat</button>
+                          <button onClick={() => removeDuoFriend(email)} style={styles.removeBtn}>✕</button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              
+              {/* Sent Pending Requests */}
+              {pendingSentRequests.length > 0 && (
+                <div style={styles.section}>
+                  <p style={styles.sectionTitle}>📤 Sent Requests ({pendingSentRequests.length})</p>
+                  {pendingSentRequests.map((req, idx) => {
+                    const user = allUsers[req.targetEmail];
+                    if (!user) return null;
+                    return (
+                      <div key={idx} style={styles.sentRequestItem}>
+                        {user.profileImage ? <img src={user.profileImage} alt={user.name} style={styles.sentRequestImage} /> : <div style={styles.sentRequestEmoji}>{user.profilePhoto || "😊"}</div>}
+                        <div style={styles.sentRequestInfo}>
+                          <div style={styles.sentRequestName}>{user.name}, {user.age}</div>
+                          <div style={styles.sentRequestStatus}>⏳ Waiting for response...</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -963,10 +1177,10 @@ const styles = {
   settingsBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', color: 'white', fontSize: 16, position: 'relative' },
   filterBadge: { position: 'absolute', top: -2, right: -2, background: '#FF4D6D', borderRadius: 10, padding: '2px 5px', fontSize: 10, fontWeight: 'bold' },
   logoutBtn: { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 16px', borderRadius: 50, cursor: 'pointer', color: 'white', fontSize: 12 },
-  tabs: { display: 'flex', gap: 10, marginBottom: 20 },
-  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 14, position: 'relative' },
-  newBadge: { position: 'absolute', top: -5, right: 10, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 6px', fontSize: 10 },
-  swipeCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: 48, padding: 32, textAlign: 'center', marginBottom: 24, boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'grab', position: 'relative' },
+  tabs: { display: 'flex', gap: 8, marginBottom: 20 },
+  tab: { flex: 1, padding: '10px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: '600', fontSize: 12, position: 'relative' },
+  newBadge: { position: 'absolute', top: -5, right: 5, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 5px', fontSize: 9 },
+  swipeCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: 48, padding: 32, textAlign: 'center', marginBottom: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'grab', position: 'relative' },
   profilePhotoContainer: { marginBottom: 16 },
   profilePhoto: { fontSize: 80 },
   profilePhotoImg: { width: 120, height: 120, borderRadius: 60, objectFit: 'cover', margin: '0 auto', border: '3px solid rgba(255,255,255,0.2)' },
@@ -978,6 +1192,8 @@ const styles = {
   actionButtons: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 },
   nopeCircle: { width: 64, height: 64, borderRadius: 32, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', fontSize: 28, color: '#FF4D6D', cursor: 'pointer' },
   likeCircle: { width: 72, height: 72, borderRadius: 36, background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', border: 'none', fontSize: 32, color: 'white', cursor: 'pointer', boxShadow: '0 8px 20px rgba(255,77,109,0.3)' },
+  duoButton: { background: 'linear-gradient(135deg, #4CAF50, #45a049)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 50, fontSize: 14, fontWeight: '600', cursor: 'pointer', width: '100%', marginTop: 8, transition: 'transform 0.15s' },
+  requestSentMsg: { background: 'rgba(76,175,80,0.2)', color: '#4CAF50', padding: '12px', borderRadius: 50, fontSize: 12, textAlign: 'center', marginTop: 8, border: '1px solid rgba(76,175,80,0.3)' },
   emptyState: { textAlign: 'center', padding: 40 },
   emptyEmoji: { fontSize: 60, marginBottom: 16 },
   resetBtn: { marginTop: 16, padding: '10px 24px', background: '#FF4D6D', color: 'white', border: 'none', borderRadius: 50, cursor: 'pointer' },
@@ -993,6 +1209,33 @@ const styles = {
   matchLocation: { fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 },
   chatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer' },
   likeBackBtn: { background: '#10b981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 50, cursor: 'pointer' },
+  duosContainer: { padding: '8px 0' },
+  section: { marginBottom: 24 },
+  requestItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  requestImage: { width: 50, height: 50, borderRadius: 25, objectFit: 'cover' },
+  requestEmoji: { fontSize: 40, minWidth: 50, textAlign: 'center' },
+  requestInfo: { flex: 1 },
+  requestName: { fontWeight: 'bold', fontSize: 15, color: 'white' },
+  requestVibe: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
+  requestActions: { display: 'flex', gap: 8 },
+  acceptBtn: { background: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
+  declineBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
+  emptyDuos: { textAlign: 'center', padding: 20 },
+  friendItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  friendImage: { width: 50, height: 50, borderRadius: 25, objectFit: 'cover' },
+  friendEmoji: { fontSize: 40, minWidth: 50, textAlign: 'center' },
+  friendInfo: { flex: 1 },
+  friendName: { fontWeight: 'bold', fontSize: 15, color: 'white' },
+  friendLocation: { fontSize: 11, color: 'rgba(255,255,255,0.4)' },
+  friendActions: { display: 'flex', gap: 8 },
+  friendChatBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
+  removeBtn: { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', border: 'none', padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
+  sentRequestItem: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.1)' },
+  sentRequestImage: { width: 50, height: 50, borderRadius: 25, objectFit: 'cover' },
+  sentRequestEmoji: { fontSize: 40, minWidth: 50, textAlign: 'center' },
+  sentRequestInfo: { flex: 1 },
+  sentRequestName: { fontWeight: 'bold', fontSize: 15, color: 'white' },
+  sentRequestStatus: { fontSize: 11, color: '#FFA500' },
   chatHeader: { padding: 16, borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
   backButton: { background: 'rgba(255,255,255,0.1)', border: 'none', fontSize: 24, cursor: 'pointer', color: 'white', width: 40, height: 40, borderRadius: 30 },
   chatUser: { display: 'flex', alignItems: 'center', gap: 12, flex: 1 },
