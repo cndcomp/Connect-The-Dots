@@ -2,16 +2,193 @@ import { useState, useEffect, useRef } from 'react';
 
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
 
+// World data structure
 const WORLD_DATA = {
-  '🌍 Africa': { countries: { 'Nigeria': ['Lagos', 'Abuja'], 'Egypt': ['Cairo', 'Alexandria'], 'South Africa': ['Johannesburg', 'Cape Town'], 'Kenya': ['Nairobi', 'Mombasa'] } },
-  '🌏 Asia': { countries: { 'India': ['Mumbai', 'Delhi', 'Bangalore'], 'China': ['Shanghai', 'Beijing'], 'Japan': ['Tokyo', 'Osaka'], 'South Korea': ['Seoul', 'Busan'], 'Thailand': ['Bangkok', 'Chiang Mai'], 'Singapore': ['Singapore'] } },
-  '🌎 Europe': { countries: { 'United Kingdom': ['London', 'Manchester'], 'Germany': ['Berlin', 'Munich'], 'France': ['Paris', 'Lyon'], 'Spain': ['Madrid', 'Barcelona'], 'Italy': ['Rome', 'Milan'] } },
-  '🌎 North America': { countries: { 'United States': ['New York', 'Los Angeles', 'Chicago'], 'Canada': ['Toronto', 'Vancouver'], 'Mexico': ['Mexico City', 'Cancun'] } },
-  '🌎 South America': { countries: { 'Brazil': ['São Paulo', 'Rio de Janeiro'], 'Argentina': ['Buenos Aires'], 'Colombia': ['Bogotá'] } },
-  '🌏 Oceania': { countries: { 'Australia': ['Sydney', 'Melbourne'], 'New Zealand': ['Auckland'] } }
+  '🌍 Africa': {
+    countries: {
+      'Nigeria': ['Lagos', 'Abuja', 'Kano'],
+      'Egypt': ['Cairo', 'Alexandria', 'Giza'],
+      'South Africa': ['Johannesburg', 'Cape Town', 'Durban'],
+      'Kenya': ['Nairobi', 'Mombasa', 'Kisumu'],
+      'Morocco': ['Casablanca', 'Rabat', 'Marrakech'],
+    }
+  },
+  '🌏 Asia': {
+    countries: {
+      'India': ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'],
+      'China': ['Shanghai', 'Beijing', 'Shenzhen', 'Guangzhou'],
+      'Japan': ['Tokyo', 'Osaka', 'Kyoto', 'Yokohama'],
+      'South Korea': ['Seoul', 'Busan', 'Incheon'],
+      'Thailand': ['Bangkok', 'Chiang Mai', 'Phuket'],
+      'Vietnam': ['Ho Chi Minh City', 'Hanoi', 'Da Nang'],
+      'Singapore': ['Singapore'],
+      'Malaysia': ['Kuala Lumpur', 'Penang'],
+      'Indonesia': ['Jakarta', 'Bali'],
+      'Philippines': ['Manila', 'Cebu'],
+      'Pakistan': ['Karachi', 'Lahore'],
+      'Bangladesh': ['Dhaka']
+    }
+  },
+  '🌎 Europe': {
+    countries: {
+      'United Kingdom': ['London', 'Manchester', 'Birmingham', 'Liverpool'],
+      'Germany': ['Berlin', 'Munich', 'Hamburg', 'Cologne'],
+      'France': ['Paris', 'Lyon', 'Marseille', 'Nice'],
+      'Spain': ['Madrid', 'Barcelona', 'Seville', 'Valencia'],
+      'Italy': ['Rome', 'Milan', 'Naples', 'Florence'],
+      'Netherlands': ['Amsterdam', 'Rotterdam'],
+      'Sweden': ['Stockholm', 'Gothenburg'],
+      'Norway': ['Oslo', 'Bergen'],
+      'Denmark': ['Copenhagen', 'Aarhus'],
+      'Finland': ['Helsinki', 'Espoo'],
+      'Switzerland': ['Zurich', 'Geneva'],
+      'Austria': ['Vienna', 'Salzburg'],
+      'Belgium': ['Brussels', 'Antwerp'],
+      'Portugal': ['Lisbon', 'Porto'],
+      'Greece': ['Athens', 'Thessaloniki'],
+    }
+  },
+  '🌎 North America': {
+    countries: {
+      'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Diego', 'Dallas', 'Austin', 'Boston', 'Seattle', 'Denver', 'Miami', 'Atlanta'],
+      'Canada': ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', 'Edmonton'],
+      'Mexico': ['Mexico City', 'Cancun', 'Guadalajara', 'Monterrey'],
+    }
+  },
+  '🌎 South America': {
+    countries: {
+      'Brazil': ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador'],
+      'Argentina': ['Buenos Aires', 'Córdoba', 'Rosario'],
+      'Colombia': ['Bogotá', 'Medellín', 'Cali'],
+      'Chile': ['Santiago', 'Valparaíso'],
+      'Peru': ['Lima', 'Cusco'],
+    }
+  },
+  '🌏 Oceania': {
+    countries: {
+      'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Canberra'],
+      'New Zealand': ['Auckland', 'Wellington', 'Christchurch'],
+      'Fiji': ['Suva', 'Nadi'],
+    }
+  }
 };
 
-const LGBTQ_OPTIONS = ['🏳️‍🌈 Straight', '🏳️‍🌈 Gay', '🏳️‍🌈 Lesbian', '🏳️‍🌈 Bisexual', '🏳️‍🌈 Pansexual', '🏳️‍🌈 Asexual', '🏳️‍🌈 Queer', '🏳️‍🌈 Questioning', '🏳️‍🌈 Prefer not to say'];
+const LGBTQ_OPTIONS = [
+  '🏳️‍🌈 Straight', '🏳️‍🌈 Gay', '🏳️‍🌈 Lesbian', '🏳️‍🌈 Bisexual',
+  '🏳️‍🌈 Pansexual', '🏳️‍🌈 Asexual', '🏳️‍🌈 Queer', '🏳️‍🌈 Questioning', '🏳️‍🌈 Prefer not to say'
+];
+
+// Video Call Component
+const VideoCallModal = ({ isOpen, onClose, targetUser, currentUser }) => {
+  const [myStream, setMyStream] = useState(null);
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  
+  const myVideoRef = useRef();
+  const theirVideoRef = useRef();
+  const peerRef = useRef();
+
+  useEffect(() => {
+    if (isOpen) {
+      startCall();
+    }
+    return () => {
+      if (myStream) {
+        myStream.getTracks().forEach(track => track.stop());
+      }
+      if (peerRef.current) {
+        peerRef.current.destroy();
+      }
+    };
+  }, [isOpen]);
+
+  const startCall = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setMyStream(stream);
+      if (myVideoRef.current) {
+        myVideoRef.current.srcObject = stream;
+      }
+
+      setTimeout(() => {
+        setIsCallActive(true);
+      }, 1000);
+    } catch (err) {
+      alert('Could not access camera/microphone. Please check permissions.');
+    }
+  };
+
+  const toggleMute = () => {
+    if (myStream) {
+      myStream.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (myStream) {
+      myStream.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsVideoOff(!isVideoOff);
+    }
+  };
+
+  const endCall = () => {
+    if (myStream) {
+      myStream.getTracks().forEach(track => track.stop());
+    }
+    if (peerRef.current) {
+      peerRef.current.destroy();
+    }
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={styles.callOverlay}>
+      <div style={styles.callContainer}>
+        <div style={styles.remoteVideoContainer}>
+          <video
+            ref={theirVideoRef}
+            autoPlay
+            playsInline
+            style={styles.remoteVideo}
+          />
+          <div style={styles.callingText}>
+            {!isCallActive ? `Calling ${targetUser?.name}...` : `Connected with ${targetUser?.name}`}
+          </div>
+        </div>
+        
+        <div style={styles.localVideoContainer}>
+          <video
+            ref={myVideoRef}
+            autoPlay
+            playsInline
+            muted
+            style={styles.localVideo}
+          />
+        </div>
+
+        <div style={styles.callControls}>
+          <button onClick={toggleMute} style={styles.callControlBtn}>
+            {isMuted ? '🔇' : '🎤'}
+          </button>
+          <button onClick={toggleVideo} style={styles.callControlBtn}>
+            {isVideoOff ? '📹❌' : '📹'}
+          </button>
+          <button onClick={endCall} style={{...styles.callControlBtn, ...styles.endCallBtn}}>
+            📞
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -19,6 +196,8 @@ export default function App() {
   const [showSignup, setShowSignup] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+  const [callTarget, setCallTarget] = useState(null);
   const [signupStep, setSignupStep] = useState(1);
   const [isCompletingProfile, setIsCompletingProfile] = useState(false);
   const [pendingGoogleUser, setPendingGoogleUser] = useState(null);
@@ -241,6 +420,7 @@ export default function App() {
     setActiveChat(null);
     setShowSettings(false);
     setShowFilters(false);
+    setShowVideoCall(false);
   };
 
   const updateMyData = (updates) => {
@@ -368,41 +548,48 @@ export default function App() {
     const match = activeChat;
     const msgs = userData?.messages?.[match.email] || [];
     return (
-      <div style={styles.container}>
-        <div style={styles.chatCard}>
-          <div style={styles.chatHeader}>
-            <button onClick={() => setActiveChat(null)} style={styles.backButton}>←</button>
-            <div style={styles.chatUser}>
-              {match.profileImage ? <img src={match.profileImage} alt={match.name} style={styles.chatImage} /> : <div style={styles.chatEmoji}>{match.profilePhoto || "😊"}</div>}
-              <div>
-                <div style={styles.chatName}>{match.name}, {match.age}</div>
-                <div style={styles.chatVibe}>{match.vibe}</div>
-                {match.location && <div style={styles.chatLocation}>📍 {match.location}</div>}
-              </div>
-            </div>
-          </div>
-          <div style={styles.chatMessages}>
-            {msgs.length === 0 && (
-              <div style={styles.icebreaker}>
-                <div style={styles.icebreakerText}>💬 Start the conversation!</div>
-                <button onClick={() => sendMessage(match.email, `Hey ${match.name}! Great to meet you 😊`)} style={styles.icebreakerBtn}>Say Hello 👋</button>
-              </div>
-            )}
-            {msgs.map((msg, i) => (
-              <div key={i} style={{...styles.message, justifyContent: msg.from === 'me' ? 'flex-end' : 'flex-start'}}>
-                <div style={{...styles.messageBubble, background: msg.from === 'me' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: 'white'}}>
-                  {msg.text}
-                  <div style={styles.messageTime}>{msg.time}</div>
+      <>
+        <div style={styles.container}>
+          <div style={styles.chatCard}>
+            <div style={styles.chatHeader}>
+              <button onClick={() => setActiveChat(null)} style={styles.backButton}>←</button>
+              <div style={styles.chatUser}>
+                {match.profileImage ? <img src={match.profileImage} alt={match.name} style={styles.chatImage} /> : <div style={styles.chatEmoji}>{match.profilePhoto || "😊"}</div>}
+                <div>
+                  <div style={styles.chatName}>{match.name}, {match.age}</div>
+                  <div style={styles.chatVibe}>{match.vibe}</div>
+                  {match.location && <div style={styles.chatLocation}>📍 {match.location}</div>}
                 </div>
               </div>
-            ))}
-          </div>
-          <div style={styles.chatInput}>
-            <input style={styles.chatInputField} placeholder="Type a message..." value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage(match.email, inputText)} />
-            <button style={styles.sendButton} onClick={() => sendMessage(match.email, inputText)}>Send</button>
+              <div style={styles.callButtons}>
+                <button onClick={() => { setCallTarget(match); setShowVideoCall(true); }} style={styles.videoCallBtn}>📹</button>
+                <button onClick={() => { setCallTarget(match); setShowVideoCall(true); }} style={styles.audioCallBtn}>📞</button>
+              </div>
+            </div>
+            <div style={styles.chatMessages}>
+              {msgs.length === 0 && (
+                <div style={styles.icebreaker}>
+                  <div style={styles.icebreakerText}>💬 Start the conversation!</div>
+                  <button onClick={() => sendMessage(match.email, `Hey ${match.name}! Great to meet you 😊`)} style={styles.icebreakerBtn}>Say Hello 👋</button>
+                </div>
+              )}
+              {msgs.map((msg, i) => (
+                <div key={i} style={{...styles.message, justifyContent: msg.from === 'me' ? 'flex-end' : 'flex-start'}}>
+                  <div style={{...styles.messageBubble, background: msg.from === 'me' ? '#FF4D6D' : 'rgba(255,255,255,0.1)', color: 'white'}}>
+                    {msg.text}
+                    <div style={styles.messageTime}>{msg.time}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={styles.chatInput}>
+              <input style={styles.chatInputField} placeholder="Type a message..." value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage(match.email, inputText)} />
+              <button style={styles.sendButton} onClick={() => sendMessage(match.email, inputText)}>Send</button>
+            </div>
           </div>
         </div>
-      </div>
+        <VideoCallModal isOpen={showVideoCall} onClose={() => setShowVideoCall(false)} targetUser={callTarget} currentUser={currentUser} />
+      </>
     );
   }
 
@@ -724,6 +911,9 @@ export default function App() {
           </div>
         </div>
       )}
+      
+      {/* Video Call Modal */}
+      <VideoCallModal isOpen={showVideoCall} onClose={() => setShowVideoCall(false)} targetUser={callTarget} currentUser={currentUser} />
     </>
   );
 }
@@ -733,6 +923,19 @@ const styles = {
   glassCard: { background: 'rgba(255, 255, 255, 0.08)', backdropFilter: 'blur(24px)', borderRadius: 48, padding: 40, width: '100%', maxWidth: 400, textAlign: 'center', boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5)' },
   appCard: { background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(24px)', borderRadius: 48, padding: 24, width: '100%', maxWidth: 450, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 25px 45px -12px rgba(0,0,0,0.5)' },
   chatCard: { background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(24px)', borderRadius: 48, width: '100%', maxWidth: 450, height: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
+  callOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  callContainer: { width: '100%', height: '100%', position: 'relative' },
+  remoteVideoContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  remoteVideo: { width: '100%', height: '100%', objectFit: 'cover' },
+  callingText: { position: 'absolute', bottom: 100, left: 0, right: 0, textAlign: 'center', color: 'white', fontSize: 16, background: 'rgba(0,0,0,0.5)', padding: 10 },
+  localVideoContainer: { position: 'absolute', bottom: 80, right: 20, width: 100, height: 150, borderRadius: 12, overflow: 'hidden', border: '2px solid white' },
+  localVideo: { width: '100%', height: '100%', objectFit: 'cover' },
+  callControls: { position: 'absolute', bottom: 20, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 20, padding: 20 },
+  callControlBtn: { width: 60, height: 60, borderRadius: 30, background: 'rgba(255,255,255,0.2)', border: 'none', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  endCallBtn: { background: '#FF4D6D' },
+  callButtons: { display: 'flex', gap: 8, marginLeft: 'auto' },
+  videoCallBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', fontSize: 16 },
+  audioCallBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', fontSize: 16 },
   logoContainer: { marginBottom: 16, cursor: 'pointer' },
   logoImage: { width: 80, height: 80, objectFit: 'contain', borderRadius: 20, margin: '0 auto' },
   logoFallback: { fontSize: 64 },
