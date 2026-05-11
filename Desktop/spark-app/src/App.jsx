@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { zoomies } from 'ldrs';
 
-// Register the zoomies loader
 zoomies.register();
 
 const GOOGLE_CLIENT_ID = '503312762836-tmi47ccqp3q9clmff4ehe3jerdsidm8u.apps.googleusercontent.com';
 
-// LGBTQ+ options
 const LGBTQ_OPTIONS = [
   '🏳️‍🌈 Straight', '🏳️‍🌈 Gay', '🏳️‍🌈 Lesbian', '🏳️‍🌈 Bisexual',
   '🏳️‍🌈 Pansexual', '🏳️‍🌈 Asexual', '🏳️‍🌈 Queer', '🏳️‍🌈 Questioning', '🏳️‍🌈 Prefer not to say'
@@ -18,58 +16,33 @@ const VideoCallModal = ({ isOpen, onClose, targetUser, currentUser }) => {
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  
   const myVideoRef = useRef();
   const theirVideoRef = useRef();
 
   useEffect(() => {
-    if (isOpen) {
-      startCall();
-    }
-    return () => {
-      if (myStream) {
-        myStream.getTracks().forEach(track => track.stop());
-      }
-    };
+    if (isOpen) startCall();
+    return () => { if (myStream) myStream.getTracks().forEach(track => track.stop()); };
   }, [isOpen]);
 
   const startCall = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setMyStream(stream);
-      if (myVideoRef.current) {
-        myVideoRef.current.srcObject = stream;
-      }
-      setTimeout(() => {
-        setIsCallActive(true);
-      }, 1000);
-    } catch (err) {
-      alert('Could not access camera/microphone');
-    }
+      if (myVideoRef.current) myVideoRef.current.srcObject = stream;
+      setTimeout(() => setIsCallActive(true), 1000);
+    } catch (err) { alert('Could not access camera/microphone'); }
   };
 
   const toggleMute = () => {
-    if (myStream) {
-      myStream.getAudioTracks().forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      setIsMuted(!isMuted);
-    }
+    if (myStream) { myStream.getAudioTracks().forEach(track => track.enabled = !track.enabled); setIsMuted(!isMuted); }
   };
 
   const toggleVideo = () => {
-    if (myStream) {
-      myStream.getVideoTracks().forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      setIsVideoOff(!isVideoOff);
-    }
+    if (myStream) { myStream.getVideoTracks().forEach(track => track.enabled = !track.enabled); setIsVideoOff(!isVideoOff); }
   };
 
   const endCall = () => {
-    if (myStream) {
-      myStream.getTracks().forEach(track => track.stop());
-    }
+    if (myStream) myStream.getTracks().forEach(track => track.stop());
     onClose();
   };
 
@@ -80,9 +53,7 @@ const VideoCallModal = ({ isOpen, onClose, targetUser, currentUser }) => {
       <div style={styles.callContainer}>
         <div style={styles.remoteVideoContainer}>
           <video ref={theirVideoRef} autoPlay playsInline style={styles.remoteVideo} />
-          <div style={styles.callingText}>
-            {!isCallActive ? `Calling ${targetUser?.name}...` : `Connected with ${targetUser?.name}`}
-          </div>
+          <div style={styles.callingText}>{!isCallActive ? `Calling ${targetUser?.name}...` : `Connected with ${targetUser?.name}`}</div>
         </div>
         <div style={styles.localVideoContainer}>
           <video ref={myVideoRef} autoPlay playsInline muted style={styles.localVideo} />
@@ -105,12 +76,15 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [callTarget, setCallTarget] = useState(null);
-  const [activeTab, setActiveTab] = useState('swipe');
+  const [activeTab, setActiveTab] = useState('discover');
   const [activeChat, setActiveChat] = useState(null);
   const [inputText, setInputText] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
-  const [touchX, setTouchX] = useState(0);
-  const [touchStart, setTouchStart] = useState(null);
+  
+  // Easter egg state
+  const [showNumberPad, setShowNumberPad] = useState(false);
+  const [secretCode, setSecretCode] = useState('');
+  const [showToilet, setShowToilet] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
   
   // User data
   const [email, setEmail] = useState('');
@@ -120,7 +94,6 @@ export default function App() {
   const [bio, setBio] = useState('');
   const [vibe, setVibe] = useState('');
   const [profileImage, setProfileImage] = useState(null);
-  const [interests, setInterests] = useState([]);
   const [location, setLocation] = useState('');
   const [sexuality, setSexuality] = useState('');
   
@@ -129,9 +102,8 @@ export default function App() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Simulate loading
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 2000);
+    const timer = setTimeout(() => setLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -144,8 +116,44 @@ export default function App() {
   const incomingRequests = userData?.incomingRequests || [];
   const sentRequests = userData?.sentRequests || [];
 
-  // All users except current
   const otherUsers = Object.values(allUsers).filter(u => u.email !== currentUser?.email);
+
+  // Easter egg functions
+  const handleLogoClick = () => {
+    const newCount = tapCount + 1;
+    setTapCount(newCount);
+    setTimeout(() => setTapCount(0), 1000);
+    if (newCount >= 4) {
+      setShowNumberPad(true);
+      setTapCount(0);
+    }
+  };
+
+  const handleNumberPad = (num) => {
+    const newCode = secretCode + num;
+    setSecretCode(newCode);
+    if (newCode === '1234') {
+      setShowToilet(true);
+      setShowNumberPad(false);
+      setSecretCode('');
+    } else if (newCode.length === 4) {
+      setSecretCode('');
+    }
+  };
+
+  const handleCloseToilet = () => {
+    setShowToilet(false);
+    setSecretCode('');
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => setProfileImage(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -160,16 +168,12 @@ export default function App() {
 
   const handleSignup = (e) => {
     e.preventDefault();
-    if (allUsers[email]) {
-      alert('Account already exists!');
-      return;
-    }
+    if (allUsers[email]) { alert('Account already exists!'); return; }
     const newUser = {
       email, password, name, age: parseInt(age) || 25,
       bio: bio || "New here!",
       vibe: vibe || "Excited to connect",
       profileImage: profileImage || null,
-      interests: interests,
       location: location || "Unknown",
       sexuality: sexuality || "Prefer not to say",
       friends: [], incomingRequests: [], sentRequests: [], messages: {},
@@ -182,14 +186,9 @@ export default function App() {
 
   const sendInvite = (targetEmail) => {
     const targetUser = allUsers[targetEmail];
-    if (myFriends.includes(targetEmail)) {
-      alert(`You're already connected with ${targetUser.name}!`);
-      return;
-    }
-    if (sentRequests.includes(targetEmail)) {
-      alert(`Invite already sent to ${targetUser.name}!`);
-      return;
-    }
+    if (!targetUser) return;
+    if (myFriends.includes(targetEmail)) { alert(`You're already connected with ${targetUser.name}!`); return; }
+    if (sentRequests.includes(targetEmail)) { alert(`Invite already sent to ${targetUser.name}!`); return; }
     
     updateMyData({ sentRequests: [...sentRequests, targetEmail] });
     setAllUsers(prev => ({
@@ -220,9 +219,7 @@ export default function App() {
   };
 
   const declineInvite = (fromEmail) => {
-    updateMyData({
-      incomingRequests: incomingRequests.filter(email => email !== fromEmail)
-    });
+    updateMyData({ incomingRequests: incomingRequests.filter(email => email !== fromEmail) });
     setAllUsers(prev => ({
       ...prev,
       [fromEmail]: {
@@ -253,13 +250,13 @@ export default function App() {
     if (!text.trim()) return;
     const msgs = userData?.messages?.[friendEmail] || [];
     updateMyData({
-      messages: { ...userData?.messages, [friendEmail]: [...msgs, { from: 'me', text, time: new Date().toLocaleTimeString() }] }
+      messages: { ...userData?.messages, [friendEmail]: [...msgs, { from: 'me', text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] }
     });
     setInputText('');
   };
 
   const deleteAccount = () => {
-    if (confirm('⚠️ Delete your account permanently?')) {
+    if (confirm('⚠️ Delete your account permanently? This cannot be undone.')) {
       const newUsers = { ...allUsers };
       delete newUsers[currentUser.email];
       setAllUsers(newUsers);
@@ -268,25 +265,20 @@ export default function App() {
     }
   };
 
-  const handleDragStart = (e) => {
-    setTouchStart(e.clientX || e.touches?.[0]?.clientX);
-    setIsDragging(true);
-  };
+  // Logo Component with easter egg
+  const Logo = () => (
+    <div onClick={handleLogoClick} style={{ cursor: 'pointer', marginBottom: 16 }}>
+      <div style={{ fontSize: 64 }}>🔗✨</div>
+      <div style={{ fontSize: 8, color: '#999', marginTop: 4 }}>✨ tap 4 times ✨</div>
+    </div>
+  );
 
-  const handleDragMove = (e) => {
-    if (!touchStart) return;
-    const delta = (e.clientX || e.touches?.[0]?.clientX) - touchStart;
-    setTouchX(delta);
-  };
-
-  const handleDragEnd = (targetEmail) => {
-    if (Math.abs(touchX) > 80) {
-      if (touchX > 0) sendInvite(targetEmail);
-    }
-    setTouchX(0);
-    setIsDragging(false);
-    setTouchStart(null);
-  };
+  const SmallLogo = () => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 24 }}>🔗</span>
+      <span style={{ fontSize: 16, fontWeight: 'bold', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Connect the Dots</span>
+    </div>
+  );
 
   // Loading Screen
   if (loading) {
@@ -307,7 +299,9 @@ export default function App() {
           <div style={styles.chatHeader}>
             <button onClick={() => setActiveChat(null)} style={styles.backBtn}>←</button>
             <div style={styles.chatUserInfo}>
-              <div style={styles.chatAvatar}>{activeChat.profileImage ? <img src={activeChat.profileImage} alt="" style={styles.chatAvatarImg} /> : <span style={styles.chatAvatarEmoji}>😊</span>}</div>
+              <div style={styles.chatAvatar}>
+                {activeChat.profileImage ? <img src={activeChat.profileImage} alt="" style={styles.chatAvatarImg} /> : <span style={styles.chatAvatarEmoji}>😊</span>}
+              </div>
               <div>
                 <div style={styles.chatName}>{activeChat.name}, {activeChat.age}</div>
                 <div style={styles.chatStatus}>✨ Connected</div>
@@ -327,7 +321,7 @@ export default function App() {
             )}
             {msgs.map((msg, i) => (
               <div key={i} style={{...styles.chatMsg, justifyContent: msg.from === 'me' ? 'flex-end' : 'flex-start'}}>
-                <div style={{...styles.chatBubble, background: msg.from === 'me' ? '#FF4D6D' : 'rgba(255,255,255,0.1)'}}>
+                <div style={{...styles.chatBubble, background: msg.from === 'me' ? '#FF4D6D' : '#f0f0f0', color: msg.from === 'me' ? 'white' : '#333'}}>
                   {msg.text}
                   <div style={styles.chatTime}>{msg.time}</div>
                 </div>
@@ -349,7 +343,7 @@ export default function App() {
     return (
       <div style={styles.authContainer}>
         <div style={styles.authCard}>
-          <div style={styles.authLogo}>🔗✨</div>
+          <Logo />
           <h1 style={styles.authTitle}>Connect the Dots</h1>
           <p style={styles.authSubtitle}>Find your perfect match</p>
           {!showSignup ? (
@@ -363,13 +357,17 @@ export default function App() {
             <form onSubmit={handleSignup} style={styles.authForm}>
               <input style={styles.authInput} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
               <input style={styles.authInput} placeholder="Age" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
-              <input style={styles.authInput} placeholder="Your vibe (e.g., Foodie, Traveler)" value={vibe} onChange={(e) => setVibe(e.target.value)} />
+              <input style={styles.authInput} placeholder="Your vibe" value={vibe} onChange={(e) => setVibe(e.target.value)} />
               <textarea style={{...styles.authInput, minHeight: 80}} placeholder="Tell us about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} />
               <input style={styles.authInput} placeholder="Your city" value={location} onChange={(e) => setLocation(e.target.value)} />
               <select style={styles.authInput} value={sexuality} onChange={(e) => setSexuality(e.target.value)}>
                 <option value="">How do you identify?</option>
                 {LGBTQ_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
+              <div style={styles.imageUploadArea}>
+                <input type="file" accept="image/*" id="profileImage" onChange={handleImageUpload} style={{ display: 'none' }} />
+                <button type="button" onClick={() => document.getElementById('profileImage').click()} style={styles.imageUploadBtn}>{profileImage ? '📷 Photo added ✓' : '📷 Add profile photo'}</button>
+              </div>
               <input style={styles.authInput} placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               <input style={styles.authInput} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               <button type="submit" style={styles.authBtn}>Create Account →</button>
@@ -377,29 +375,61 @@ export default function App() {
             </form>
           )}
         </div>
+        
+        {/* Easter Egg Number Pad */}
+        {showNumberPad && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.easterModal}>
+              <p style={styles.modalSubtitle}>enter passcode</p>
+              <div style={styles.secretCodeDisplay}>
+                {secretCode.split('').map((_, i) => <span key={i} style={styles.codeDot}>●</span>)}
+                {[...Array(4 - secretCode.length)].map((_, i) => <span key={`empty-${i}`} style={styles.codeDotEmpty}>○</span>)}
+              </div>
+              <div style={styles.numberPad}>
+                {[1,2,3,4,5,6,7,8,9].map(num => <button key={num} onClick={() => handleNumberPad(num.toString())} style={styles.numBtn}>{num}</button>)}
+                <button onClick={() => handleNumberPad('0')} style={styles.numBtn}>0</button>
+                <button onClick={() => setSecretCode(secretCode.slice(0, -1))} style={styles.numBtn}>⌫</button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Easter Egg Toilet Message */}
+        {showToilet && (
+          <div style={styles.modalOverlay}>
+            <div style={styles.toiletModal}>
+              <div style={styles.toiletEmoji}>🚽</div>
+              <p style={styles.toiletMessage}>fuck you, hrishi.</p>
+              <button onClick={handleCloseToilet} style={styles.closeBtn}>close</button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   // Main App
   const hasPendingRequests = incomingRequests?.length > 0;
+  const visibleUsers = otherUsers.filter(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email));
 
   return (
     <>
       <div style={styles.mainContainer}>
         <div style={styles.mainCard}>
-          {/* Header */}
+          {/* Header with Small Logo */}
           <div style={styles.mainHeader}>
-            <div style={styles.mainLogo}>🔗 Connect the Dots</div>
+            <SmallLogo />
             <div style={styles.mainActions}>
-              <button onClick={() => setShowSettings(!showSettings)} style={styles.iconBtn}>⚙️</button>
+              <button onClick={() => setShowSettings(true)} style={styles.iconBtn}>⚙️</button>
               <button onClick={() => setLoggedIn(false)} style={styles.logoutBtn}>Logout</button>
             </div>
           </div>
 
           {/* User Profile Bar */}
           <div style={styles.profileBar}>
-            <div style={styles.profileAvatar}>{userData?.profileImage ? <img src={userData.profileImage} alt="" style={styles.profileAvatarImg} /> : <span style={styles.profileAvatarEmoji}>😊</span>}</div>
+            <div style={styles.profileAvatar}>
+              {userData?.profileImage ? <img src={userData.profileImage} alt="" style={styles.profileAvatarImg} /> : <span style={styles.profileAvatarEmoji}>😊</span>}
+            </div>
             <div style={styles.profileInfo}>
               <div style={styles.profileName}>{userData?.name}, {userData?.age}</div>
               <div style={styles.profileLocation}>📍 {userData?.location || 'Unknown'}</div>
@@ -409,47 +439,35 @@ export default function App() {
 
           {/* Tabs */}
           <div style={styles.tabBar}>
-            <button onClick={() => setActiveTab('swipe')} style={{...styles.tab, background: activeTab === 'swipe' ? 'linear-gradient(135deg, #FF6B6B, #FF4D6D)' : 'rgba(255,255,255,0.05)'}}>✨ Discover</button>
-            <button onClick={() => setActiveTab('connections')} style={{...styles.tab, background: activeTab === 'connections' ? 'linear-gradient(135deg, #FF6B6B, #FF4D6D)' : 'rgba(255,255,255,0.05)'}}>
+            <button onClick={() => setActiveTab('discover')} style={{...styles.tab, background: activeTab === 'discover' ? '#FF4D6D' : '#f0f0f0', color: activeTab === 'discover' ? 'white' : '#666'}}>✨ Discover</button>
+            <button onClick={() => setActiveTab('connections')} style={{...styles.tab, background: activeTab === 'connections' ? '#FF4D6D' : '#f0f0f0', color: activeTab === 'connections' ? 'white' : '#666'}}>
               👥 Connections ({myFriends?.length || 0})
               {hasPendingRequests && <span style={styles.tabBadge}>!</span>}
             </button>
           </div>
 
-          {/* Swipe View */}
-          {activeTab === 'swipe' && (
-            <div style={styles.swipeContainer}>
-              {otherUsers.filter(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email)).length === 0 ? (
+          {/* Discover View */}
+          {activeTab === 'discover' && (
+            <div style={styles.discoverContainer}>
+              {visibleUsers.length === 0 ? (
                 <div style={styles.emptyState}>
                   <span style={styles.emptyEmoji}>🎉</span>
                   <h3>No more profiles!</h3>
                   <p>Check your connections or come back later</p>
                 </div>
               ) : (
-                <div style={{...styles.swipeCard, transform: isDragging ? `translateX(${touchX}px) rotate(${touchX * 0.05}deg)` : 'none', transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)'}}
-                  onMouseDown={handleDragStart}
-                  onMouseMove={handleDragMove}
-                  onMouseUp={() => handleDragEnd(otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email))?.email)}
-                  onTouchStart={handleDragStart}
-                  onTouchMove={handleDragMove}
-                  onTouchEnd={() => handleDragEnd(otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email))?.email)}>
-                  <div style={styles.swipeAvatar}>
-                    {otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email))?.profileImage ? 
-                      <img src={otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email)).profileImage} alt="" style={styles.swipeAvatarImg} /> : 
-                      <span style={styles.swipeAvatarEmoji}>😊</span>}
+                <>
+                  <div style={styles.profileCard}>
+                    <div style={styles.profileCardAvatar}>
+                      {visibleUsers[0]?.profileImage ? <img src={visibleUsers[0].profileImage} alt="" style={styles.profileCardAvatarImg} /> : <span style={styles.profileCardAvatarEmoji}>😊</span>}
+                    </div>
+                    <h2 style={styles.profileCardName}>{visibleUsers[0]?.name}, {visibleUsers[0]?.age}</h2>
+                    <p style={styles.profileCardVibe}>{visibleUsers[0]?.vibe}</p>
+                    <p style={styles.profileCardBio}>"{visibleUsers[0]?.bio}"</p>
+                    <button onClick={() => sendInvite(visibleUsers[0].email)} style={styles.inviteBtn}>🤝 Send Invite</button>
                   </div>
-                  <h2 style={styles.swipeName}>{otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email))?.name}, {otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email))?.age}</h2>
-                  <p style={styles.swipeVibe}>{otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email))?.vibe}</p>
-                  <p style={styles.swipeBio}>"{otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email))?.bio}"</p>
-                  {isDragging && <div style={{...styles.dragHint, opacity: Math.min(Math.abs(touchX) / 80, 0.8)}}>{touchX > 0 ? '♥ SEND INVITE' : '✕'}</div>}
-                </div>
+                </>
               )}
-              <div style={styles.swipeActions}>
-                <button onClick={() => {
-                  const target = otherUsers.find(u => !myFriends.includes(u.email) && !sentRequests.includes(u.email) && !incomingRequests.includes(u.email));
-                  if (target) sendInvite(target.email);
-                }} style={styles.inviteBtn}>🤝 Send Invite</button>
-              </div>
             </div>
           )}
 
@@ -459,13 +477,15 @@ export default function App() {
               {/* Incoming Requests */}
               {incomingRequests?.length > 0 && (
                 <div style={styles.section}>
-                  <h3 style={styles.sectionTitle}>✨ Invites for you ({incomingRequests.length})</h3>
+                  <h3 style={styles.sectionTitle}>✨ Invites ({incomingRequests.length})</h3>
                   {incomingRequests.map(email => {
                     const user = allUsers[email];
                     if (!user) return null;
                     return (
                       <div key={email} style={styles.requestCard}>
-                        <div style={styles.requestAvatar}>{user.profileImage ? <img src={user.profileImage} alt="" style={styles.requestAvatarImg} /> : <span style={styles.requestAvatarEmoji}>😊</span>}</div>
+                        <div style={styles.requestAvatar}>
+                          {user.profileImage ? <img src={user.profileImage} alt="" style={styles.requestAvatarImg} /> : <span style={styles.requestAvatarEmoji}>😊</span>}
+                        </div>
                         <div style={styles.requestInfo}>
                           <div style={styles.requestName}>{user.name}, {user.age}</div>
                           <div style={styles.requestBio}>{user.vibe}</div>
@@ -494,13 +514,15 @@ export default function App() {
                     if (!user) return null;
                     return (
                       <div key={email} style={styles.connectionCard}>
-                        <div style={styles.connectionAvatar}>{user.profileImage ? <img src={user.profileImage} alt="" style={styles.connectionAvatarImg} /> : <span style={styles.connectionAvatarEmoji}>😊</span>}</div>
+                        <div style={styles.connectionAvatar}>
+                          {user.profileImage ? <img src={user.profileImage} alt="" style={styles.connectionAvatarImg} /> : <span style={styles.connectionAvatarEmoji}>😊</span>}
+                        </div>
                         <div style={styles.connectionInfo}>
                           <div style={styles.connectionName}>{user.name}, {user.age}</div>
                           <div style={styles.connectionLocation}>📍 {user.location}</div>
                         </div>
                         <div style={styles.connectionActions}>
-                          <button onClick={() => setActiveChat(user)} style={styles.msgBtn}>💬</button>
+                          <button onClick={() => setActiveChat(user)} style={styles.chatConnBtn}>💬 Chat</button>
                           <button onClick={() => { setCallTarget(user); setShowVideoCall(true); }} style={styles.callConnBtn}>📞</button>
                           <button onClick={() => removeFriend(email)} style={styles.removeConnBtn}>✕</button>
                         </div>
@@ -519,7 +541,9 @@ export default function App() {
                     if (!user) return null;
                     return (
                       <div key={email} style={styles.sentCard}>
-                        <div style={styles.sentAvatar}>{user.profileImage ? <img src={user.profileImage} alt="" style={styles.sentAvatarImg} /> : <span style={styles.sentAvatarEmoji}>😊</span>}</div>
+                        <div style={styles.sentAvatar}>
+                          {user.profileImage ? <img src={user.profileImage} alt="" style={styles.sentAvatarImg} /> : <span style={styles.sentAvatarEmoji}>😊</span>}
+                        </div>
                         <div style={styles.sentInfo}>
                           <div style={styles.sentName}>{user.name}, {user.age}</div>
                           <div style={styles.sentStatus}>⏳ Waiting for response...</div>
@@ -539,7 +563,7 @@ export default function App() {
         <div style={styles.modalOverlay} onClick={() => setShowSettings(false)}>
           <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2>Settings</h2>
+              <h2 style={{ color: '#333' }}>Settings</h2>
               <button onClick={() => setShowSettings(false)} style={styles.modalClose}>✕</button>
             </div>
             <div style={styles.modalContent}>
@@ -561,32 +585,43 @@ export default function App() {
 }
 
 const styles = {
-  // Loading Screen
   loadingContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 },
-  loadingText: { color: 'white', fontSize: 18, fontWeight: '500', letterSpacing: 2 },
+  loadingText: { color: 'white', fontSize: 18, fontWeight: 500, letterSpacing: 2 },
   
-  // Auth Screen
-  authContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  authCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', borderRadius: 48, padding: 40, width: '100%', maxWidth: 450, textAlign: 'center', boxShadow: '0 25px 45px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)' },
-  authLogo: { fontSize: 60, marginBottom: 16 },
-  authTitle: { fontSize: 32, fontWeight: 'bold', color: 'white', marginBottom: 8 },
-  authSubtitle: { color: 'rgba(255,255,255,0.7)', marginBottom: 32 },
+  authContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, position: 'relative' },
+  authCard: { background: 'white', borderRadius: 48, padding: 40, width: '100%', maxWidth: 450, textAlign: 'center', boxShadow: '0 25px 45px rgba(0,0,0,0.1)' },
+  authTitle: { fontSize: 28, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 8 },
+  authSubtitle: { color: '#666', marginBottom: 32 },
   authForm: { display: 'flex', flexDirection: 'column', gap: 12 },
-  authInput: { padding: 16, borderRadius: 28, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)', color: 'white', fontSize: 14, outline: 'none' },
-  authBtn: { padding: 14, borderRadius: 50, background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', color: 'white', border: 'none', fontSize: 16, fontWeight: 'bold', cursor: 'pointer', transition: 'transform 0.2s' },
-  authSwitch: { marginTop: 20, color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  authInput: { padding: 16, borderRadius: 28, border: '1px solid #e0e0e0', background: '#f8f8f8', fontSize: 14, outline: 'none' },
+  authBtn: { padding: 14, borderRadius: 50, background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', color: 'white', border: 'none', fontSize: 16, fontWeight: 'bold', cursor: 'pointer' },
+  authSwitch: { marginTop: 20, color: '#666', fontSize: 14 },
   authLink: { background: 'none', border: 'none', color: '#FF4D6D', fontWeight: 'bold', cursor: 'pointer' },
+  imageUploadArea: { marginBottom: 12 },
+  imageUploadBtn: { width: '100%', padding: 12, background: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: 28, fontSize: 12, cursor: 'pointer', color: '#666' },
+  
+  // Easter Egg styles
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 },
+  easterModal: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '32px 28px', textAlign: 'center', width: 280, border: '0.5px solid rgba(255,255,255,0.1)' },
+  modalSubtitle: { color: 'rgba(255,255,255,0.4)', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 24 },
+  secretCodeDisplay: { display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 28 },
+  codeDot: { fontSize: 24, color: '#FF4D6D' },
+  codeDotEmpty: { fontSize: 24, color: 'rgba(255,255,255,0.2)' },
+  numberPad: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 },
+  numBtn: { background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.08)', padding: '14px', borderRadius: 40, color: 'white', fontSize: 20, cursor: 'pointer', fontFamily: 'monospace' },
+  toiletModal: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, padding: '40px 32px', textAlign: 'center', width: 280, border: '0.5px solid rgba(255,255,255,0.1)' },
+  toiletEmoji: { fontSize: 64, marginBottom: 20, cursor: 'pointer' },
+  toiletMessage: { color: 'rgba(255,255,255,0.85)', fontSize: 15, marginBottom: 28 },
+  closeBtn: { background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', padding: '10px 24px', borderRadius: 30, color: 'rgba(255,255,255,0.6)', cursor: 'pointer', width: '100%' },
   
   // Main App
   mainContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 },
   mainCard: { background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)', borderRadius: 48, padding: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 45px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' },
   mainHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  mainLogo: { fontSize: 18, fontWeight: 'bold', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
   mainActions: { display: 'flex', gap: 10 },
   iconBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: '8px 12px', borderRadius: 30, cursor: 'pointer', fontSize: 16 },
   logoutBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', padding: '8px 16px', borderRadius: 30, cursor: 'pointer', color: 'white', fontSize: 12 },
   
-  // Profile Bar
   profileBar: { display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 60, marginBottom: 20 },
   profileAvatar: { width: 50, height: 50, borderRadius: 25, overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   profileAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
@@ -596,25 +631,20 @@ const styles = {
   profileLocation: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
   profileVibe: { color: '#FF4D6D', fontSize: 12, fontWeight: 'bold', padding: '4px 12px', background: 'rgba(255,77,109,0.2)', borderRadius: 20 },
   
-  // Tabs
   tabBar: { display: 'flex', gap: 10, marginBottom: 20 },
-  tab: { flex: 1, padding: '12px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 14, color: 'white', transition: 'all 0.3s', position: 'relative' },
+  tab: { flex: 1, padding: '12px', borderRadius: 50, border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 14, position: 'relative' },
   tabBadge: { position: 'absolute', top: -5, right: 5, background: '#FF4D6D', color: 'white', borderRadius: 10, padding: '0px 6px', fontSize: 10 },
   
-  // Swipe View
-  swipeContainer: { animation: 'fadeIn 0.5s' },
-  swipeCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: 48, padding: 32, textAlign: 'center', marginBottom: 20, cursor: 'grab', transition: 'transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1)', position: 'relative' },
-  swipeAvatar: { width: 140, height: 140, borderRadius: 70, margin: '0 auto 16px', overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  swipeAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
-  swipeAvatarEmoji: { fontSize: 64 },
-  swipeName: { fontSize: 28, fontWeight: 'bold', color: 'white', marginBottom: 4 },
-  swipeVibe: { color: '#FF4D6D', fontWeight: 'bold', fontSize: 14, marginBottom: 8 },
-  swipeBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic' },
-  dragHint: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 28, fontWeight: 'bold', color: 'white', textShadow: '0 0 20px rgba(0,0,0,0.5)', pointerEvents: 'none', whiteSpace: 'nowrap' },
-  swipeActions: { display: 'flex', justifyContent: 'center' },
-  inviteBtn: { background: 'linear-gradient(135deg, #4CAF50, #45a049)', color: 'white', border: 'none', padding: '14px 32px', borderRadius: 50, fontSize: 16, fontWeight: 'bold', cursor: 'pointer', transition: 'transform 0.2s' },
+  discoverContainer: { animation: 'fadeIn 0.5s' },
+  profileCard: { background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', borderRadius: 48, padding: 32, textAlign: 'center', marginBottom: 20 },
+  profileCardAvatar: { width: 140, height: 140, borderRadius: 70, margin: '0 auto 16px', overflow: 'hidden', background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  profileCardAvatarImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  profileCardAvatarEmoji: { fontSize: 64 },
+  profileCardName: { fontSize: 28, fontWeight: 'bold', color: 'white', marginBottom: 4 },
+  profileCardVibe: { color: '#FF4D6D', fontWeight: 'bold', fontSize: 14, marginBottom: 8 },
+  profileCardBio: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontStyle: 'italic', marginBottom: 20 },
+  inviteBtn: { background: 'linear-gradient(135deg, #4CAF50, #45a049)', color: 'white', border: 'none', padding: '14px 32px', borderRadius: 50, fontSize: 16, fontWeight: 'bold', cursor: 'pointer', width: '100%' },
   
-  // Connections View
   connectionsContainer: { animation: 'fadeIn 0.5s' },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: 'rgba(255,255,255,0.7)', marginBottom: 12 },
@@ -637,7 +667,7 @@ const styles = {
   connectionName: { color: 'white', fontWeight: 'bold', fontSize: 15 },
   connectionLocation: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
   connectionActions: { display: 'flex', gap: 6 },
-  msgBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 14 },
+  chatConnBtn: { background: '#FF4D6D', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 14 },
   callConnBtn: { background: '#4CAF50', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 14 },
   removeConnBtn: { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', border: 'none', padding: '8px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
   
@@ -653,7 +683,7 @@ const styles = {
   emptyConnections: { textAlign: 'center', padding: 30, background: 'rgba(255,255,255,0.03)', borderRadius: 32 },
   emptyEmoji: { fontSize: 60, marginBottom: 16, display: 'block' },
   
-  // Chat Screen
+  // Chat
   chatContainer: { minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', display: 'flex', flexDirection: 'column' },
   chatHeader: { display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' },
   backBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', fontSize: 24, cursor: 'pointer', color: 'white', width: 40, height: 40, borderRadius: 30 },
@@ -669,13 +699,13 @@ const styles = {
   emptyChat: { textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.5)' },
   emptyChatEmoji: { fontSize: 48, marginBottom: 12, display: 'block' },
   chatMsg: { display: 'flex' },
-  chatBubble: { maxWidth: '70%', padding: '10px 16px', borderRadius: 24, fontSize: 14, position: 'relative' },
+  chatBubble: { maxWidth: '70%', padding: '10px 16px', borderRadius: 24, fontSize: 14 },
   chatTime: { fontSize: 10, opacity: 0.6, marginTop: 4 },
   chatInputArea: { display: 'flex', gap: 10, padding: 16, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(20px)' },
   chatInput: { flex: 1, padding: 14, borderRadius: 40, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: 14, outline: 'none' },
   sendMsgBtn: { background: 'linear-gradient(135deg, #FF6B6B, #FF4D6D)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 40, cursor: 'pointer', fontWeight: 'bold' },
   
-  // Call UI
+  // Call
   callOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000', zIndex: 2000 },
   callContainer: { width: '100%', height: '100%', position: 'relative' },
   remoteVideoContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -687,12 +717,11 @@ const styles = {
   callControlBtn: { width: 60, height: 60, borderRadius: 30, background: 'rgba(255,255,255,0.2)', border: 'none', fontSize: 24, cursor: 'pointer' },
   endCallBtn: { background: '#FF4D6D' },
   
-  // Modals
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
-  modalCard: { background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(20px)', borderRadius: 32, width: '90%', maxWidth: 400, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' },
-  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'white' },
-  modalClose: { background: 'none', border: 'none', fontSize: 20, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' },
+  // Settings Modal
+  modalCard: { background: 'white', borderRadius: 32, width: '90%', maxWidth: 400, overflow: 'hidden' },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottom: '1px solid #eee' },
+  modalClose: { background: 'none', border: 'none', fontSize: 20, color: '#999', cursor: 'pointer' },
   modalContent: { padding: 20 },
-  settingItem: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'white' },
-  dangerBtn: { background: 'rgba(255,77,109,0.2)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '12px', borderRadius: 28, width: '100%', cursor: 'pointer', fontSize: 14, fontWeight: 'bold', marginTop: 16 },
+  settingItem: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #eee', color: '#333' },
+  dangerBtn: { background: 'rgba(255,77,109,0.1)', color: '#FF4D6D', border: '1px solid rgba(255,77,109,0.3)', padding: '12px', borderRadius: 28, width: '100%', cursor: 'pointer', fontSize: 14, fontWeight: 'bold', marginTop: 16 },
 };
